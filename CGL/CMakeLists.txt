@@ -1,5 +1,9 @@
-cmake_minimum_required(VERSION 2.8)
-project(CGL)
+# Original file Copyright CMU462 Fall 2015: 
+# Kayvon Fatahalian, Keenan Crane,
+# Sky Gao, Bryce Summers, Michael Choquette.
+cmake_minimum_required(VERSION 3.11)
+
+project(CGL LANGUAGES C CXX VERSION 2020.0)
 
 #-------------------------------------------------------------------------------
 # Build options
@@ -10,186 +14,108 @@ option(CGL_BUILD_DOCS     "Build documentation"      OFF)
 option(CGL_BUILD_TESTS    "Build tests programs"     OFF)
 option(CGL_BUILD_EXAMPLES "Build examples"           OFF)
 
-#-------------------------------------------------------------------------------
-# CMake modules
-#-------------------------------------------------------------------------------
-list(APPEND CMAKE_MODULE_PATH "${CGL_SOURCE_DIR}/cmake/modules/")
-
-#-------------------------------------------------------------------------------
-# CGL paths
-#-------------------------------------------------------------------------------
-set(CGL_INCLUDE_DIRS "${CGL_SOURCE_DIR}/include")
-
-#-------------------------------------------------------------------------------
-# Platform-specific settings
-#-------------------------------------------------------------------------------
-
-###################
-# Building on OSX #
-###################
-if(APPLE)
-
-  # Clang only
-  if(${CMAKE_CXX_COMPILER_ID} STREQUAL "CLANG")
-
-    # OSX Framework dependencies
-    if(NOT CGL_BUILD_SHARED)
-      include_directories( "/System/Library/Frameworks" )
-      find_library (COCOA_LIBRARIES Cocoa)
-      find_library (IOKIT_LIBRARIES IOkit)
-      find_library (COREVIDEO_LIBRARIES CoreVideo)
-    endif()
-
-    # Clang configuration
-    if(${CMAKE_CXX_COMPILER_ID} STREQUAL "AppleClang")
-
-      set(CLANG_CXX_FLAGS "-std=c++11 -m64")
-
-      if(CGL_BUILD_DEBUG)
-        set(CMAKE_BUILD_TYPE Debug)
-      else(CGL_BUILD_DEBUG)
-        set(CLANG_CXX_FLAGS "${CLANG_CXX_FLAGS} -O3")
-        set(CLANG_CXX_FLAGS "${CLANG_CXX_FLAGS} -funroll-loops")
-        set(CLANG_CXX_FLAGS "${CLANG_CXX_FLAGS} -Wno-narrowing")
-        set(CLANG_CXX_FLAGS "${CLANG_CXX_FLAGS} -Wno-deprecated-register")
-      endif(CGL_BUILD_DEBUG)
-
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CLANG_CXX_FLAGS}")
-
-    endif()
-
-    # GCC configuration
-    if(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
-
-      set(GCC_CXX_FLAGS "-std=gnu++11 -m64")
-
-      if(CGL_BUILD_DEBUG)
-        set(CMAKE_BUILD_TYPE Debug)
-      else(CGL_BUILD_DEBUG)
-        set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -O3")
-        set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -fopenmp")
-      endif(CGL_BUILD_DEBUG)
-
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GCC_CXX_FLAGS}")
-
-    endif()
-
-  endif()
-
-endif(APPLE)
-
-##################
-# Build on Linux #
-##################
-if(UNIX AND NOT APPLE)
-
-  # GCC only
-  if(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
-
-    set(GCC_CXX_FLAGS "-std=gnu++11 -m64")
-
-    # X11 Dependencies
-    if(NOT CGL_BUILD_SHARED)
-      set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -lXi")
-      set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -lXxf86vm")
-      set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -lXinerama")
-      set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -lXcursor")
-      set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -lXfixes")
-      set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -lXrandr")
-      set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -lXext")
-      set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -lXrender")
-      set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -lX11")
-      set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -lpthread")
-      set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -lxcb")
-      set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -lXau")
-    endif()
-
-    # Debug configuration
-    if(CGL_BUILD_DEBUG)
-        set(CMAKE_BUILD_TYPE Debug)
-    else(CGL_BUILD_DEBUG)
-        set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -O3")
-        set(GCC_CXX_FLAGS "${GCC_CXX_FLAGS} -fopenmp")
-    endif(CGL_BUILD_DEBUG)
-
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GCC_CXX_FLAGS}")
-
-  endif()
-
+if(BUILD_DEBUG)
+    set(CGL_BUILD_DEBUG ON)
 endif()
 
-####################
-# Build on Windows #
-####################
-if(WIN32)
+if(BUILD_DOCS)
+    set(CGL_BUILD_DOCS ON)
+endif()
 
-  if(MSVC)
+#-------------------------------------------------------------------------------
+# CMake options
+#-------------------------------------------------------------------------------
+if(CGL_BUILD_DEBUG)
+    set(CMAKE_BUILD_TYPE Debug)
+endif()
 
-    set(MSVC_CXX_FLAGS "-std=c++11")
+#-------------------------------------------------------------------------------
+# Compiler-specific Options
+#-------------------------------------------------------------------------------
 
-    if(CGL_BUILD_DEBUG)
-        set(CMAKE_BUILD_TYPE Debug)
-    else(CGL_BUILD_DEBUG)
-    endif(CGL_BUILD_DEBUG)
+include(find_avx.cmake)
+CHECK_FOR_AVX()
 
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MSVC_CXX_FLAGS}")
+# The C++ standard and optimization level are set by the top-level project.
+# CGL only adds -fPIC and the AVX flags. The AVX flags change the memory
+# layout of Vector3D/Vector4D, so they are exported (CGL_CXX_FLAGS below) and
+# must be applied to every target that uses CGL.
+if(${CMAKE_CXX_COMPILER_ID} MATCHES "Clang" OR ${CMAKE_CXX_COMPILER_ID} STREQUAL GNU)
+    set(CGL_CXX_FLAGS "-fPIC")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+endif()
 
-    add_subdirectory("${CGL_SOURCE_DIR}/deps/freetype") 
+if(${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
+    set(CGL_CXX_FLAGS "/wd4838 /wd4305 /wd4244 /wd4267")
+endif()
 
-  endif(MSVC)
+set(CGL_CXX_FLAGS "${CGL_CXX_FLAGS} ${AVX_FLAGS}")
 
-  if(MINGW)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CGL_CXX_FLAGS}")
 
-    set(MSVC_CXX_FLAGS "-std=c++11")
+#-------------------------------------------------------------------------------
+# Create target: CGL
+#-------------------------------------------------------------------------------
+set(CGL_SOURCE
+    src/vector2D.cpp
+    src/vector3D.cpp
+    src/vector4D.cpp
+    src/matrix3x3.cpp
+    src/matrix4x4.cpp
+    src/quaternion.cpp
+    src/complex.cpp
+    src/color.cpp
+    src/osdtext.cpp
+    src/osdfont.cpp
+    src/viewer.cpp
+    src/base64.cpp
+    src/lodepng.cpp
+    src/tinyxml2.cpp
+    src/path.cpp
+)
 
-    if(CGL_BUILD_DEBUG)
-        set(CMAKE_BUILD_TYPE Debug)
-    else(CGL_BUILD_DEBUG)
-    endif(CGL_BUILD_DEBUG)
+add_library(CGL STATIC ${CGL_SOURCE})
 
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MSVC_CXX_FLAGS}")
-
-  endif(MINGW)
-
-endif(WIN32)
+set(CGL_INCLUDE_DIRS
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/CGL
+)
+target_include_directories(CGL PUBLIC ${CGL_INCLUDE_DIRS})
 
 #-------------------------------------------------------------------------------
 # Find dependencies
 #-------------------------------------------------------------------------------
 
-# Required packages
-if(NOT WIN32)
-  find_package(Freetype REQUIRED)
+# Threads
+find_package(Threads REQUIRED)
+
+# OpenGL
+set(OpenGL_GL_PREFERENCE LEGACY)
+find_package(OpenGL REQUIRED)
+
+# Freetype
+find_package(Freetype REQUIRED)
+target_include_directories(CGL PRIVATE ${FREETYPE_INCLUDE_DIRS})
+target_link_libraries(CGL PRIVATE ${FREETYPE_LIBRARIES})
+
+# GLEW (static, bundled)
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/deps/glew")
+target_link_libraries(CGL PUBLIC glew)
+
+# GLFW
+# NanoGUI (used by the simulator) already builds GLFW and merges it into the
+# nanogui library, so CGL takes GLFW from there instead of building a second
+# copy. The top-level CMakeLists must add ext/nanogui before this directory.
+if(NOT TARGET nanogui)
+    message(FATAL_ERROR "CGL expects the nanogui target (which provides GLFW) to be defined first.")
 endif()
-
-
-#-------------------------------------------------------------------------------
-# Set definitions
-#-------------------------------------------------------------------------------
-add_definitions(${NANOGUI_EXTRA_DEFS})
-
-#-------------------------------------------------------------------------------
-# Set include directories
-#-------------------------------------------------------------------------------
-include_directories(
-  ${CGL_INCLUDE_DIRS}
-  ${FREETYPE_INCLUDE_DIRS}
-  ${NANOGUI_EXTRA_INCS}
-)
-
-#-------------------------------------------------------------------------------
-# Set link directories
-#-------------------------------------------------------------------------------
-link_directories(
-  ${FREETYPE_LIBRARY_DIRS}
-)
+target_include_directories(CGL PUBLIC ${NANOGUI_EXTRA_INCS})
+target_link_libraries(CGL PUBLIC nanogui ${NANOGUI_EXTRA_LIBS})
+target_link_libraries(CGL PUBLIC OpenGL::GL)
 
 #-------------------------------------------------------------------------------
 # Add subdirectories
 #-------------------------------------------------------------------------------
-
-# CGL library source directory
-add_subdirectory(src)
 
 # CGL tests source directory
 if(CGL_BUILD_TESTS)
@@ -215,3 +141,5 @@ endif()
 
 # Install settings
 set(CMAKE_INSTALL_PREFIX "${CGL_SOURCE_DIR}")
+
+set(CGL_CXX_FLAGS "${CGL_CXX_FLAGS}" PARENT_SCOPE)

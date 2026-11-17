@@ -48,9 +48,9 @@ namespace CGL {
     const Matrix3x3& A( *this );
     Matrix3x3 B;
 
-    B(0,0) = -A(0,0); B(0,1) = -A(0,1); B(0,2) = -A(0,2);
-    B(1,0) = -A(1,0); B(1,1) = -A(1,1); B(1,2) = -A(1,2);
-    B(2,0) = -A(2,0); B(2,1) = -A(2,1); B(2,2) = -A(2,2);
+    B[0] = -A[0];
+    B[1] = -A[1];
+    B[2] = -A[2];
 
     return B;
   }
@@ -58,29 +58,19 @@ namespace CGL {
   void Matrix3x3::operator+=( const Matrix3x3& B ) {
 
     Matrix3x3& A( *this );
-    double* Aij = (double*) &A;
-    const double* Bij = (const double*) &B;
 
-    *Aij++ += *Bij++;
-    *Aij++ += *Bij++;
-    *Aij++ += *Bij++;
-    *Aij++ += *Bij++;
-    *Aij++ += *Bij++;
-    *Aij++ += *Bij++;
-    *Aij++ += *Bij++;
-    *Aij++ += *Bij++;
-    *Aij++ += *Bij++;
+    A[0] += B[0];
+    A[1] += B[1];
+    A[2] += B[2];
   }
 
   Matrix3x3 Matrix3x3::operator-( const Matrix3x3& B ) const {
     const Matrix3x3& A( *this );
     Matrix3x3 C;
 
-    for( int i = 0; i < 3; i++ )
-    for( int j = 0; j < 3; j++ )
-    {
-       C(i,j) = A(i,j) - B(i,j);
-    }
+    C[0] = A[0] - B[0];
+    C[1] = A[1] - B[1];
+    C[2] = A[2] - B[2];
 
     return C;
   }
@@ -89,30 +79,19 @@ namespace CGL {
     const Matrix3x3& A( *this );
     Matrix3x3 B;
 
-    for( int i = 0; i < 3; i++ )
-    for( int j = 0; j < 3; j++ )
-    {
-       B(i,j) = c*A(i,j);
-    }
+    B[0] = A[0] * c;
+    B[1] = A[1] * c;
+    B[2] = A[2] * c;
 
     return B;
   }
 
   Matrix3x3 operator*( double c, const Matrix3x3& A ) {
-
     Matrix3x3 cA;
-    const double* Aij = (const double*) &A;
-    double* cAij = (double*) &cA;
 
-    *cAij++ = c * (*Aij++);
-    *cAij++ = c * (*Aij++);
-    *cAij++ = c * (*Aij++);
-    *cAij++ = c * (*Aij++);
-    *cAij++ = c * (*Aij++);
-    *cAij++ = c * (*Aij++);
-    *cAij++ = c * (*Aij++);
-    *cAij++ = c * (*Aij++);
-    *cAij++ = c * (*Aij++);
+    cA[0] = A[0] * c;
+    cA[1] = A[1] * c;
+    cA[2] = A[2] * c;
 
     return cA;
   }
@@ -121,24 +100,17 @@ namespace CGL {
     const Matrix3x3& A( *this );
     Matrix3x3 C;
 
-    for( int i = 0; i < 3; i++ )
-    for( int j = 0; j < 3; j++ )
-    {
-       C(i,j) = 0.;
-
-       for( int k = 0; k < 3; k++ )
-       {
-          C(i,j) += A(i,k)*B(k,j);
-       }
-    }
+    C[0] = A * B[0];
+    C[1] = A * B[1];
+    C[2] = A * B[2];
 
     return C;
   }
 
   Vector3D Matrix3x3::operator*( const Vector3D& x ) const {
-    return x[0]*entries[0] +
-           x[1]*entries[1] +
-           x[2]*entries[2] ;
+    return x.x * entries[0] +
+           x.y * entries[1] +
+           x.z * entries[2];
   }
 
   Matrix3x3 Matrix3x3::T( void ) const {
@@ -171,11 +143,9 @@ namespace CGL {
     Matrix3x3& A( *this );
     double rx = 1./x;
 
-    for( int i = 0; i < 3; i++ )
-    for( int j = 0; j < 3; j++ )
-    {
-       A( i, j ) *= rx;
-    }
+    A[0] *= rx;
+    A[1] *= rx;
+    A[2] *= rx;
   }
 
   Matrix3x3 Matrix3x3::identity( void ) {
