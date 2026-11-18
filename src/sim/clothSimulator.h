@@ -8,6 +8,7 @@
 #include "camera.h"
 #include "cloth.h"
 #include "collision/collisionObject.h"
+#include "jello/metrics.h"
 #include "jello/softBody.h"
 
 using namespace nanogui;
@@ -75,6 +76,11 @@ public:
   void setCutaway(bool on);
   // Jello mode: draw the visible triangle edges over shaded surfaces (key E).
   void setShowEdges(bool on) { show_edges = on; }
+  // Jello mode: write one metrics.csv row per simulated frame to `path`
+  // (same columns as jellosim --out; row 0 is the state when logging starts).
+  // Key M toggles it with a timestamped file in out/sim/. Reset (R) ends it.
+  bool startMetricsLog(const std::string &path);
+  void stopMetricsLog();
 
 private:
   virtual void initGUI(Screen *screen);
@@ -128,6 +134,10 @@ private:
   CGL::Vector3D scene_center;  // block center at rest; camera target
   double scene_size = 1;       // largest block side; scales camera and light
   CGL::Vector3D light_pos = CGL::Vector3D(0.5, 2, 2);
+  Jello::MetricsLogger metrics_log;
+  int metrics_frame = 0;         // rows written after row 0
+  double metrics_t0 = 0;         // sim_time when logging started
+  nanogui::CheckBox *metrics_box = nullptr;
   CGL::Vector3D light_intensity = CGL::Vector3D(3, 3, 3);
 
   // OpenGL attributes

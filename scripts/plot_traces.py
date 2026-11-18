@@ -13,7 +13,8 @@ center-of-mass height, block height (vertical extent), and volume error
 OUT_PREFIX.png/.pdf and OUT_PREFIX.csv (long format: label, t, com_y, height,
 bbox_ratio, vol_err_pct).
 Runs that fail the stability check are drawn up to the failure, marked x.
-(Stage Q1 replaces the stdout parsing with a proper per-frame CSV.)
+(Kept so the M1-X2 figures can be regenerated as logged. New figures use
+scripts/plot_metrics.py, which reads the per-frame metrics.csv instead.)
 """
 import argparse
 import csv

@@ -1,0 +1,4 @@
+label,scene_file,overrides,solver,substeps,stable,failure,seconds,max_abs_vol_err_pct,median_ms_per_frame,mean_ms_per_frame,run_dir
+mass-spring + volume (150 substeps),scene/jello/drop_ms_volume.json,,mass_spring,150,1,,2.5000,0.8358,8.070,8.327,out/sim/Q1-02_drop-com-top-ms-vs-xpbd/mass-spring-volume-150-substeps
+XPBD + volume (50 substeps),scene/jello/drop_xpbd_volume.json,,xpbd,50,1,,2.5000,0.8993,9.617,9.648,out/sim/Q1-02_drop-com-top-ms-vs-xpbd/xpbd-volume-50-substeps
+XPBD + volume (400 substeps),scene/jello/drop_xpbd_volume.json,xpbd.substeps=400,xpbd,400,1,,2.5000,0.2243,76.718,76.934,out/sim/Q1-02_drop-com-top-ms-vs-xpbd/xpbd-volume-400-substeps

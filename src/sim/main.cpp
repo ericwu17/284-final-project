@@ -162,13 +162,16 @@ void usageError(const char *binaryName) {
   printf("                     (default: pause), e.g. to record a blow-up.\n");
   printf("  -P     <STRING>    Save a screenshot of the first frame to this PNG\n");
   printf("                     and exit.\n");
+  printf("  -M     <STRING>    Jello: log per-frame metrics to this CSV from launch\n");
+  printf("                     (same columns as jellosim --out; key M toggles).\n");
   printf("\n");
   printf("Scenes with a top-level \"jello\" object (scene/jello/*.json) load a\n");
   printf("tet-mesh soft body instead of a cloth.\n");
   printf("\n");
   printf("Keys: P pause, N step, R reset, Space reset camera,\n");
   printf("      S screenshot, V start/stop recording (saved under out/capture/),\n");
-  printf("      jello only: 1/2/3 camera presets, C cutaway, E edge overlay.\n");
+  printf("      jello only: 1/2/3 camera presets, C cutaway, E edge overlay,\n");
+  printf("      M start/stop the metrics CSV (saved under out/sim/).\n");
   exit(-1);
 }
 
@@ -438,8 +441,9 @@ int main(int argc, char **argv) {
   bool ignore_instability = false;
   std::vector<std::pair<std::string, std::string>> scene_overrides;
   std::string screenshot_path;
+  std::string metrics_path;
   
-  while ((c = getopt (argc, argv, "f:r:a:o:R:T:S:C:KEUO:P:")) != -1) {
+  while ((c = getopt (argc, argv, "f:r:a:o:R:T:S:C:KEUO:P:M:")) != -1) {
     switch (c) {
       case 'f': {
         file_to_load_from = optarg;
@@ -510,6 +514,10 @@ int main(int argc, char **argv) {
       }
       case 'P': {
         screenshot_path = optarg;
+        break;
+      }
+      case 'M': {
+        metrics_path = optarg;
         break;
       }
       default: {
@@ -587,6 +595,7 @@ int main(int argc, char **argv) {
   if (start_cutaway) app->setCutaway(true);
   if (start_edges) app->setShowEdges(true);
   if (!screenshot_path.empty()) app->requestScreenshotTo(screenshot_path, /*exit_after=*/true);
+  if (!metrics_path.empty()) app->startMetricsLog(metrics_path);
 
   if (!record_dir.empty()) {
     app->startRecording(record_dir, record_seconds, /*exit_when_done=*/record_seconds > 0);
@@ -625,5 +634,6 @@ int main(int argc, char **argv) {
     }
   }
 
+  app->stopMetricsLog();  // flush and report the CSV, if one is open
   return 0;
 }

@@ -218,7 +218,7 @@ Both use the same geometric quantities (`tetVolume`, `tetVolumeGradients` in `te
 - **Findings:**
   - Worst volume error in the drop: mass-spring 7.2% → 0.84%; XPBD 7.7% → 1.18% at matched stiffness, 0.90% at compliance 1e-6 (meets the 1% target).
   - The penalty fixes the soft-spring inversion (M1-04): ks = 150 survives the drop.
-  - Mass-spring pays in time step: min substeps 38 → 60 (kv 1e5) → 159 (kv 1e6). XPBD gains: 39 → 24 (1e-5) → 22 (1e-6). At equal accuracy (~0.3%) the cost per frame is similar (MS 400 substeps 22 ms, XPBD 100 substeps 20 ms).
+  - Mass-spring pays in time step: min substeps 38 → 60 (kv 1e5) → 159 (kv 1e6). XPBD gains: 39 → 24 (1e-5) → 22 (1e-6). At equal volume stiffness and accuracy (MS kv 1e6 Pa with 400 substeps vs XPBD compliance 1e-6 with 100 substeps, ~0.3% error) the cost per frame is similar (21 vs 19.5 ms; Q1-03).
   - Stable dt vs stiffness (X2-03, ks/k from 250 to 16,000 N/m): mass-spring + penalty keeps the k^-1/2 slope (58 → 261 substeps), lifted only at soft springs, where the penalty is the stiffest force. XPBD + volume (1e-5) needs 23–33 substeps at every k (dt ≈ 1.0–1.45 ms, no trend): volume constraints remove the tet inversions that limit edges-only XPBD.
   - Hard volume constraints (compliance 0) invert tets with one Gauss-Seidel pass per substep: they fight the edge and contact constraints.
   - Squash test (4 g, ks = 150): springs only lose 5.9% volume; with the penalty 0.7%, and the sides bulge past the rest outline.
@@ -249,6 +249,20 @@ Both use the same geometric quantities (`tetVolume`, `tetVolumeGradients` in `te
   - `Q1-02` COM y / top y vs t for both solvers (an early look at the oscillation comparison).
   - `Q1-03` ms per frame for both solvers at 8³.
 - **Done when:** one command turns a set of runs into report-ready figures.
+- **Built:**
+  - `Jello::measureFrame` / `MetricsLogger` (`jello/metrics.{h,cpp}`): the columns above plus `height`, `yaw_deg`, `tilt_deg` (yaw tracks the XPBD spin artifact from X2). Row 0 is the initial state.
+  - `jellosim --run SCENE --out DIR [--label TEXT]` writes `DIR/metrics.csv` and `DIR/run.json` (scene file, overrides, every resolved scene value, substeps, dt, mesh counts, result, git commit and dirty flag). The stdout table is unchanged, so `stability_sweep.py` and `plot_traces.py` still work.
+  - Viewer: key M or the "log metrics CSV" checkbox writes `out/sim/gui_<timestamp>/metrics.csv`; `-M path.csv` logs from launch. R (reset) ends the log.
+  - `scripts/plot_metrics.py OUT --run "label|scene|k=v,..." ... | --dir RUN_DIR ...` runs the scenes into `out/sim/<OUT name>/<label>/` and plots panels `vol, com, top, height, yaw, mintet`; `--timing` draws ms per frame instead. Also writes `OUT_runs.csv` (settings and summary numbers per run), so multi-run figures stay reproducible.
+- **Verified:**
+  - Gravity off, both solvers with volume terms, 3 s: volume error exactly 0, COM and top face constant, min tet ratio 1.
+  - The GUI log (`-M`, XPBD + volume drop) matches the `jellosim` CSV exactly on every shared row.
+  - The new stdout matches the earlier M2-02 trace to its 4-decimal printing.
+- **Findings:**
+  - Without volume terms, one tet reaches 38–46% of its rest volume on impact; with them the minimum stays above 87% (Q1-01).
+  - The springs-only volume error zig-zags frame to frame: the volume ("breathing") mode is faster than 15 Hz, so 30 fps samples alias it. The max-error numbers are per output frame, not per substep.
+  - All setups settle at the same height; XPBD rebounds lower with fewer substeps (numerical damping), and the 400-substep XPBD bounces longer than mass-spring (different contact energy loss, unified in C1) (Q1-02).
+  - An XPBD substep costs ~5x a mass-spring substep, and both are faster than real time on the 8³ mesh (Q1-03).
 
 ### Stage C1: Ground friction and a shared contact model (Day 3)
 

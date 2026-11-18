@@ -162,6 +162,26 @@ std::vector<std::unique_ptr<Collider>> JelloScene::buildColliders() const {
   return out;
 }
 
+std::string JelloScene::toJson() const {
+  auto vec = [](const Vector3D &v) { return json::array({v.x, v.y, v.z}); };
+  json j;
+  j["jello"] = {{"size", vec(size)},
+                {"cells", json::array({cells[0], cells[1], cells[2]})},
+                {"origin", vec(origin)},
+                {"density", density}};
+  j["solver"] = solver;
+  j["mass_spring"] = {{"ks", massSpring.ks}, {"kd", massSpring.kd},
+                      {"substeps", massSpring.substeps}, {"kv", massSpring.kv},
+                      {"volume", massSpring.volume}};
+  j["xpbd"] = {{"edge_compliance", xpbd.edgeCompliance}, {"edge_damping", xpbd.edgeDamping},
+               {"substeps", xpbd.substeps}, {"volume_compliance", xpbd.volumeCompliance},
+               {"volume", xpbd.volume}};
+  j["gravity"] = vec(gravity);
+  if (hasGround) j["ground"] = {{"y", groundY}, {"friction", groundFriction}};
+  else j["ground"] = nullptr;
+  return j.dump(2);
+}
+
 bool JelloScene::isJelloScene(const std::string &path) {
   std::ifstream in(path);
   if (!in.good()) return false;

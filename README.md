@@ -78,4 +78,24 @@ scripts/log_capture.py media/S0_baseline/S0-03_cloth-on-sphere.mp4 \
     --caption "Figure caption..." --cmd "command that made it" --use report,video
 ```
 
+### Metrics and plots
+
+Every jello run can log one CSV row per simulated frame (volume error, center of mass, top-face height, smallest tet volume, ms per frame, ...):
+
+```sh
+./build/jellosim --run scene/jello/drop_xpbd_volume.json --seconds 3 --out out/sim/my_run --label "XPBD + volume"
+# writes out/sim/my_run/metrics.csv and run.json (all settings, result, git commit)
+```
+
+In `clothsim`, press **M** (or tick "log metrics CSV") to log the same columns to `out/sim/gui_<time>/metrics.csv`, or pass `-M file.csv` to log from launch.
+
+`scripts/plot_metrics.py` runs scenes and plots them in one command (it also accepts finished runs with `--dir`):
+
+```sh
+scripts/plot_metrics.py media/Q1_metrics/Q1-01_drop-volume-error-4-solvers --panels vol,mintet \
+    --run "mass-spring|scene/jello/drop_ms.json" \
+    --run "XPBD, 50 substeps|scene/jello/drop_xpbd.json|xpbd.substeps=50"
+scripts/plot_metrics.py out/timing --timing --run ...   # ms per frame instead
+```
+
 `out/` is git-ignored scratch space (raw frames, sim output). Only curated captures go in `media/`.

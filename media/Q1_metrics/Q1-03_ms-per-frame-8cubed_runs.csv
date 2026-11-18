@@ -1,0 +1,7 @@
+label,scene_file,overrides,solver,substeps,stable,failure,seconds,max_abs_vol_err_pct,median_ms_per_frame,mean_ms_per_frame,run_dir
+"mass-spring, springs only (100 substeps)",scene/jello/drop_ms.json,,mass_spring,100,1,,5.0000,7.2386,2.184,2.197,out/sim/Q1-03_ms-per-frame-8cubed/mass-spring-springs-only-100-substeps
+"XPBD, edges only (100 substeps)",scene/jello/drop_xpbd.json,,xpbd,100,1,,5.0000,7.7111,11.253,11.319,out/sim/Q1-03_ms-per-frame-8cubed/xpbd-edges-only-100-substeps
+mass-spring + volume 1e5 Pa (150 substeps),scene/jello/drop_ms_volume.json,,mass_spring,150,1,,5.0000,0.8358,8.068,8.077,out/sim/Q1-03_ms-per-frame-8cubed/mass-spring-volume-1e5-pa-150-substeps
+XPBD + volume 1e-6 1/Pa (50 substeps),scene/jello/drop_xpbd_volume.json,,xpbd,50,1,,5.0000,0.8993,9.699,9.741,out/sim/Q1-03_ms-per-frame-8cubed/xpbd-volume-1e-6-1-pa-50-substeps
+mass-spring + volume 1e6 Pa (400 substeps),scene/jello/drop_ms_volume.json,mass_spring.kv=1e6;mass_spring.substeps=400,mass_spring,400,1,,5.0000,0.3026,21.265,21.321,out/sim/Q1-03_ms-per-frame-8cubed/mass-spring-volume-1e6-pa-400-substeps
+XPBD + volume 1e-6 1/Pa (100 substeps),scene/jello/drop_xpbd_volume.json,xpbd.substeps=100,xpbd,100,1,,5.0000,0.3248,19.473,19.474,out/sim/Q1-03_ms-per-frame-8cubed/xpbd-volume-1e-6-1-pa-100-substeps

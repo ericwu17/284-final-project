@@ -57,6 +57,10 @@ struct JelloScene {
   // The scene's obstacles (currently just the ground, if any).
   std::vector<std::unique_ptr<Collider>> buildColliders() const;
 
+  // Every scene value after defaults and overrides, as a JSON object in the
+  // scene-file format (for run.json, so a run can be reproduced exactly).
+  std::string toJson() const;
+
   // True if the JSON file at `path` has a top-level "jello" object.
   static bool isJelloScene(const std::string &path);
 };

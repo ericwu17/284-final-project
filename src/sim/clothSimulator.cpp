@@ -1,3 +1,4 @@
+#include <chrono>
 #include <cmath>
 #include <set>
 #include <glad/glad.h>
@@ -327,6 +328,29 @@ void ClothSimulator::stopRecording() {
   if (record_exit_when_done) is_alive = false;
 }
 
+bool ClothSimulator::startMetricsLog(const std::string &path) {
+  if (!body) return false;
+  if (!metrics_log.open(path)) {
+    std::cout << "[Metrics] Cannot write " << path << std::endl;
+    return false;
+  }
+  metrics_frame = 0;
+  metrics_t0 = sim_time;
+  metrics_log.record(Jello::measureFrame(*body, 0, 0.0, 0.0));
+  std::cout << "[Metrics] Logging to " << path << std::endl;
+  if (metrics_box) metrics_box->setChecked(true);
+  return true;
+}
+
+void ClothSimulator::stopMetricsLog() {
+  if (metrics_log.isOpen()) {
+    std::cout << "[Metrics] Wrote " << metrics_log.rows() << " rows to " << metrics_log.path()
+              << " (plot: scripts/plot_metrics.py OUT --dir <its folder>)" << std::endl;
+    metrics_log.close();
+  }
+  if (metrics_box) metrics_box->setChecked(false);
+}
+
 void ClothSimulator::captureFrame(int fb_width, int fb_height) {
   if (screenshot_requested) {
     if (screenshot_delay_frames > 0) {
@@ -377,7 +401,15 @@ void ClothSimulator::drawContents() {
       ctx.gravity = gravity;
       ctx.time = sim_time;
       ctx.colliders = jello_colliders;
+      auto t0 = std::chrono::steady_clock::now();
       body->step(1.0 / frames_per_sec, ctx);
+      double step_ms =
+          std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+      if (metrics_log.isOpen()) {
+        metrics_frame++;
+        metrics_log.record(Jello::measureFrame(*body, metrics_frame,
+                                               sim_time + 1.0 / frames_per_sec - metrics_t0, step_ms));
+      }
 
       Jello::Stability st = Jello::checkStability(*body);
       if (!st.ok && !instability_reported) {
@@ -904,6 +936,7 @@ bool ClothSimulator::keyCallbackEvent(int key, int scancode, int action,
     case 'R':
       if (body) {
         body->reset();
+        stopMetricsLog();  // the logged series would jump back to the rest pose
         instability_reported = false;
         if (!recording) sim_time = 0;  // keep the recording's time grid intact
       } else {
@@ -941,6 +974,14 @@ bool ClothSimulator::keyCallbackEvent(int key, int scancode, int action,
     case 's':
     case 'S':
       requestScreenshot();
+      break;
+    case 'm':
+    case 'M':
+      if (metrics_log.isOpen()) {
+        stopMetricsLog();
+      } else {
+        startMetricsLog(m_project_root + "/out/sim/gui_" + FrameCapture::timestamp() + "/metrics.csv");
+      }
       break;
     case 'v':
     case 'V':
@@ -1038,6 +1079,14 @@ void ClothSimulator::initGUI(Screen *screen) {
     new Label(window, "C: cutaway   E: edges");
     new Label(window, "R: reset");
     new Label(window, "S: screenshot   V: record");
+    metrics_box = new CheckBox(window, "log metrics CSV (M)");
+    metrics_box->setChecked(metrics_log.isOpen());
+    metrics_box->setCallback([this](bool on) {
+      if (on && !metrics_log.isOpen())
+        startMetricsLog(m_project_root + "/out/sim/gui_" + FrameCapture::timestamp() + "/metrics.csv");
+      else if (!on)
+        stopMetricsLog();
+    });
   } else {
     // Spring types
 

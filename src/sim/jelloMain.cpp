@@ -1,8 +1,8 @@
 // jellosim: headless command-line driver for the jello simulator.
 //
 // Mesh selftest and dump (Stage P1), headless simulation with the stability
-// check (Stage M1). Per-frame export and metrics CSV come in later stages; see
-// docs/milestone-plan.md.
+// check (Stage M1), per-frame metrics CSV and run.json (Stage Q1). Per-frame
+// mesh export comes in Stage P3; see docs/milestone-plan.md.
 
 #include <algorithm>
 #include <chrono>
@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "jello/jelloScene.h"
+#include "json.hpp"
 #include "jello/metrics.h"
 #include "jello/tetMesh.h"
 
@@ -34,10 +35,15 @@ void usage(const char *bin) {
   printf("      Write a unit-cube mesh with NX x NY x NZ cells as JSON\n");
   printf("      (for scripts/plot_tetmesh.py).\n");
   printf("  %s --run SCENE.json [--seconds T] [--set KEY=VALUE]... [--every N] [--quiet]\n", bin);
+  printf("                 [--out DIR] [--label TEXT]\n");
   printf("      Simulate T seconds (default 3) at 30 output frames/s, checking\n");
   printf("      stability every frame (NaN, inverted tet, bbox > 2x rest).\n");
   printf("      --set overrides a scene value, e.g. --set mass_spring.ks=1000.\n");
   printf("      --every N prints a row every N frames (default 15).\n");
+  printf("      --out DIR writes DIR/metrics.csv (one row per output frame, frame 0\n");
+  printf("      is the initial state) and DIR/run.json (scene, overrides, final\n");
+  printf("      parameters, git commit, result). --label names the run in run.json\n");
+  printf("      (scripts/plot_metrics.py uses it as the legend entry).\n");
   printf("      Ends with one 'RESULT key=value ...' line. Exit status 0 if\n");
   printf("      stable, 3 if unstable.\n");
 }
@@ -146,10 +152,15 @@ int dumpMesh(int nx, int ny, int nz, const char *path) {
   return 0;
 }
 
-Vector3D centerOfMass(const SoftBody &body) {
-  Vector3D c(0, 0, 0);
-  for (size_t i = 0; i < body.x.size(); i++) c += body.mass[i] * body.x[i];
-  return c / body.totalMass();
+// First line of a shell command's output, or "" if it fails.
+std::string shellLine(const char *cmd) {
+  FILE *p = popen(cmd, "r");
+  if (!p) return "";
+  char buf[256] = {0};
+  std::string out = fgets(buf, sizeof(buf), p) ? buf : "";
+  pclose(p);
+  while (!out.empty() && (out.back() == '\n' || out.back() == '\r')) out.pop_back();
+  return out;
 }
 
 int run(int argc, char **argv) {
@@ -157,6 +168,7 @@ int run(int argc, char **argv) {
   double seconds = 3.0;
   bool quiet = false;
   int every = 15;  // print a row every this many frames
+  std::string outDir, label;
   std::vector<std::pair<std::string, std::string>> overrides;
   for (int i = 2; i < argc; i++) {
     std::string a = argv[i];
@@ -172,6 +184,10 @@ int run(int argc, char **argv) {
       overrides.push_back({kv.substr(0, eq), kv.substr(eq + 1)});
     } else if (a == "--every" && i + 1 < argc) {
       every = std::max(1, atoi(argv[++i]));
+    } else if (a == "--out" && i + 1 < argc) {
+      outDir = argv[++i];
+    } else if (a == "--label" && i + 1 < argc) {
+      label = argv[++i];
     } else if (a == "--quiet") {
       quiet = true;
     } else if (scenePath.empty() && a[0] != '-') {
@@ -197,14 +213,23 @@ int run(int argc, char **argv) {
   SimContext ctx;
   ctx.gravity = scene.gravity;
   for (const auto &c : colliders) ctx.colliders.push_back(c.get());
-  const double restVolume = body->mesh().volume(body->mesh().rest);
   double maxVolErr = 0;  // max |V - V0| / V0 over output frames, percent
 
   const double fps = 30.0;
   const int frames = (int)std::lround(seconds * fps);
-  double dt = 1.0 / fps;
-  if (scene.solver == "mass_spring") dt /= scene.massSpring.substeps;
-  if (scene.solver == "xpbd") dt /= scene.xpbd.substeps;
+  int substeps = 1;
+  if (scene.solver == "mass_spring") substeps = scene.massSpring.substeps;
+  if (scene.solver == "xpbd") substeps = scene.xpbd.substeps;
+  const double dt = 1.0 / fps / substeps;
+
+  MetricsLogger log;
+  if (!outDir.empty()) {
+    if (!log.open(outDir + "/metrics.csv")) {
+      fprintf(stderr, "Error: cannot write %s/metrics.csv\n", outDir.c_str());
+      return 2;
+    }
+    log.record(measureFrame(*body, 0, 0.0, 0.0));
+  }
 
   if (!quiet) {
     printf("%s: solver %s, %zu tets, mass %.3f kg, dt %.3g s\n", scenePath.c_str(),
@@ -220,31 +245,53 @@ int run(int argc, char **argv) {
     ctx.time = frame / fps;
     auto t0 = std::chrono::steady_clock::now();
     body->step(1.0 / fps, ctx);
-    simMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+    double stepMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+    simMs += stepMs;
     st = checkStability(*body);
-    double volErr = 100.0 * (body->mesh().volume(body->x) - restVolume) / restVolume;
-    if (st.ok) maxVolErr = std::max(maxVolErr, std::abs(volErr));
+    FrameMetrics m = measureFrame(*body, frame + 1, (frame + 1) / fps, stepMs);
+    log.record(m);
+    if (st.ok) maxVolErr = std::max(maxVolErr, std::abs(m.volErrPct));
     if (!quiet && ((frame + 1) % every == 0 || !st.ok)) {
-      double lo = INFINITY, hi = -INFINITY;
-      for (const Vector3D &p : body->x) { lo = std::min(lo, p.y); hi = std::max(hi, p.y); }
-      // Orientation of the top front edge (rest direction +x): yaw is its
-      // rotation about the vertical axis, tilt its angle above horizontal.
-      const TetMesh &m = body->mesh();
-      Vector3D u = body->x[m.vertexId(m.nx, m.ny, m.nz)] - body->x[m.vertexId(0, m.ny, m.nz)];
-      double yaw = atan2(-u.z, u.x) * 180 / M_PI, tilt = asin(u.y / u.norm()) * 180 / M_PI;
-      Vector3D com = centerOfMass(*body);
-      printf("%8.3f %10.4f %10.4f %10.3f %10.3f %10.3f %9.3f %9.3f %11.4f\n", (frame + 1) / fps,
-             com.y, hi - lo, st.bboxRatio, com.x * 1000, com.z * 1000, yaw, tilt, volErr);
+      printf("%8.3f %10.4f %10.4f %10.3f %10.3f %10.3f %9.3f %9.3f %11.4f\n", m.t, m.com.y,
+             m.height, st.bboxRatio, m.com.x * 1000, m.com.z * 1000, m.yawDeg, m.tiltDeg,
+             m.volErrPct);
     }
     if (!st.ok) break;
   }
   int done = std::min(frame + 1, frames);
+  std::string failT = st.ok ? "none" : std::to_string((frame + 1) / fps);
 
   printf("RESULT solver=%s stable=%d seconds=%.4f fail_t=%s dt=%.6g ms_per_frame=%.4f "
          "max_vol_err_pct=%.4f reason=\"%s\"\n",
-         body->name().c_str(), st.ok ? 1 : 0, done / fps,
-         st.ok ? "none" : std::to_string((frame + 1) / fps).c_str(), dt, simMs / done, maxVolErr,
-         st.reason.c_str());
+         body->name().c_str(), st.ok ? 1 : 0, done / fps, failT.c_str(), dt, simMs / done,
+         maxVolErr, st.reason.c_str());
+
+  if (!outDir.empty()) {
+    log.close();
+    using nlohmann::json;
+    json r;
+    r["label"] = label.empty() ? scenePath : label;
+    r["scene_file"] = scenePath;
+    json ov = json::object();
+    for (const auto &o : overrides) ov[o.first] = o.second;
+    r["overrides"] = ov;
+    r["scene"] = json::parse(scene.toJson());
+    r["seconds_requested"] = seconds;
+    r["output_fps"] = fps;
+    r["substeps"] = substeps;
+    r["dt"] = dt;
+    r["mesh"] = {{"verts", body->mesh().numVerts()}, {"tets", body->mesh().tets.size()},
+                 {"edges", body->mesh().edges.size()}, {"mass_kg", body->totalMass()}};
+    r["result"] = {{"stable", st.ok}, {"seconds", done / fps}, {"fail_t", failT},
+                   {"reason", st.reason}, {"ms_per_frame", simMs / done},
+                   {"max_vol_err_pct", maxVolErr}, {"frames_logged", log.rows()}};
+    r["git_commit"] = shellLine("git rev-parse --short HEAD 2>/dev/null");
+    r["git_dirty"] = !shellLine("git status --porcelain --untracked-files=no 2>/dev/null").empty();
+    std::ofstream out(outDir + "/run.json");
+    out << r.dump(2) << "\n";
+    if (!quiet) printf("wrote %s/metrics.csv (%d rows) and %s/run.json\n", outDir.c_str(),
+                       log.rows(), outDir.c_str());
+  }
   return st.ok ? 0 : 3;
 }
 
