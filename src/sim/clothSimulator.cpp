@@ -230,6 +230,8 @@ void ClothSimulator::init() {
     scene_center.y = 0.5 * (top + bottom);
     scene_size = max(top - bottom, max(mesh.size.x, mesh.size.z));
     canonical_view_distance = 2.8 * scene_size;
+    if (has_view_target) scene_center = view_target;
+    if (view_distance_override > 0) canonical_view_distance = view_distance_override;
     scroll_rate = scene_size / 10;
     min_view_distance = 0.3 * scene_size;
     max_view_distance = 30 * scene_size;
@@ -494,7 +496,23 @@ void ClothSimulator::drawContents() {
   if (body) {
     // The Normal shader colors the ground +y green like the block's top face,
     // which hides the top edge; leave the ground out of that view.
-    if (has_ground && active_shader.type_hint != NORMALS) drawGround(shader);
+    bool ground = has_ground && active_shader.type_hint != NORMALS;
+    if (ground) drawGround(shader);
+    if (ground || edge_overlay) {
+      // Flat-colored lines (ground grid, edge overlay) use the Wireframe shader.
+      for (const UserShader &us : shaders) {
+        if (us.type_hint != WIREFRAME) continue;
+        GLShader &ws = *us.nanogui_shader;
+        ws.bind();
+        ws.setUniform("u_model", model);
+        ws.setUniform("u_view_projection", viewProjection);
+        if (ground) {
+          ws.setUniform("u_color", nanogui::Color(0.22f, 0.23f, 0.26f, 1.0f), false);
+          drawGroundGrid(ws);
+        }
+        break;
+      }
+    }
     if (edge_overlay) {
       glDisable(GL_POLYGON_OFFSET_FILL);
       for (const UserShader &us : shaders) {
@@ -594,9 +612,10 @@ void ClothSimulator::drawSurfaceEdges(GLShader &shader) {
 }
 
 void ClothSimulator::drawGround(GLShader &shader) {
-  // A square of side 8x the block, centered under it. Lowered slightly so the
-  // block's bottom edges don't z-fight with it.
-  double h = 4 * scene_size;
+  // A square of side 8x the block (or wider than the view), centered under the
+  // camera target. Lowered slightly so the block's bottom edges don't z-fight
+  // with it.
+  double h = max(4 * scene_size, 2.5 * canonical_view_distance);
   float y = ground_y - 0.002 * scene_size;
   float cx = scene_center.x, cz = scene_center.z;
 
@@ -617,7 +636,40 @@ void ClothSimulator::drawGround(GLShader &shader) {
   if (shader.attrib("in_normal", false) != -1) shader.uploadAttrib("in_normal", normals, false);
   if (shader.attrib("in_uv", false) != -1) shader.uploadAttrib("in_uv", uvs, false);
   if (shader.attrib("in_tangent", false) != -1) shader.uploadAttrib("in_tangent", tangents, false);
+  // Push the quad back in depth so the grid lines on the same plane win the
+  // depth test (a small height offset is lost to depth precision).
+  glEnable(GL_POLYGON_OFFSET_FILL);
+  glPolygonOffset(2.0f, 2.0f);
   shader.drawArray(GL_TRIANGLE_STRIP, 0, 4);
+  glDisable(GL_POLYGON_OFFSET_FILL);
+
+}
+
+void ClothSimulator::drawGroundGrid(GLShader &shader) {
+  // Lines every half block width, fixed in world space, so sliding and walking
+  // show against them. Same plane and extent as drawGround's quad, which is
+  // pushed back in depth so these win. Drawn with the flat Wireframe shader
+  // (Phong ignores u_color).
+  double h = max(4 * scene_size, 2.5 * canonical_view_distance);
+  float gy = ground_y - 0.002 * scene_size;
+  float cx = scene_center.x, cz = scene_center.z;
+  double spacing = 0.5 * body->mesh().size.x;
+  int i0 = (int)std::ceil((cx - h) / spacing), i1 = (int)std::floor((cx + h) / spacing);
+  int k0 = (int)std::ceil((cz - h) / spacing), k1 = (int)std::floor((cz + h) / spacing);
+  int n = 2 * ((i1 - i0 + 1) + (k1 - k0 + 1));
+  if (n <= 0) return;
+  MatrixXf lp(4, n);
+  int c = 0;
+  for (int i = i0; i <= i1; i++) {
+    lp.col(c++) << i * spacing, gy, cz - h, 1.0;
+    lp.col(c++) << i * spacing, gy, cz + h, 1.0;
+  }
+  for (int k = k0; k <= k1; k++) {
+    lp.col(c++) << cx - h, gy, k * spacing, 1.0;
+    lp.col(c++) << cx + h, gy, k * spacing, 1.0;
+  }
+  shader.uploadAttrib("in_position", lp, false);
+  shader.drawArray(GL_LINES, 0, n);
 }
 
 void ClothSimulator::setCameraPreset(int preset) {

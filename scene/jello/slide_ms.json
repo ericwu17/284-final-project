@@ -1,0 +1,8 @@
+{
+  "description": "Friction test (Stage C1), mass-spring: the 10 cm block starts resting on the ground and sliding at 1 m/s along +x. Coulomb friction mu = 0.3 should stop it after v^2 / (2 mu g) = 17 cm, in v / (mu g) = 0.34 s. Same material as drop_ms_volume.json (ks 300, kv 1e5, 150 substeps).",
+  "jello": { "size": [0.1, 0.1, 0.1], "cells": [8, 8, 8], "origin": [-0.05, 0.0, -0.05], "density": 1050, "velocity": [1.0, 0.0, 0.0] },
+  "solver": "mass_spring",
+  "mass_spring": { "ks": 300, "kd": 0.02, "substeps": 150, "kv": 1e5, "volume": true },
+  "ground": { "y": 0.0, "friction": 0.3 },
+  "camera": { "target": [0.12, 0.05, 0.0], "distance": 0.55 }
+}

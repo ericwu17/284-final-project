@@ -1,7 +1,7 @@
 {
-  "description": "Mass-spring drop: 10 cm block (8x8x8 cells) released at rest with its bottom 10 cm above the ground.",
+  "description": "Mass-spring drop: 10 cm block (8x8x8 cells) released at rest with its bottom 10 cm above the ground. Frictionless ground: the M1-Q1 captures were made before friction existed (Stage C1).",
   "jello": { "size": [0.1, 0.1, 0.1], "cells": [8, 8, 8], "origin": [-0.05, 0.1, -0.05], "density": 1050 },
   "solver": "mass_spring",
   "mass_spring": { "ks": 300, "kd": 0.02, "substeps": 100 },
-  "ground": { "y": 0.0, "friction": 0.5 }
+  "ground": { "y": 0.0, "friction": 0.0 }
 }

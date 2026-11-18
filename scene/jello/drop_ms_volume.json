@@ -1,7 +1,7 @@
 {
-  "description": "Mass-spring drop with the per-tet volume penalty (Stage M2): same block, drop and springs as drop_ms.json, plus kv = 1e5 Pa. The penalty stiffens the explicit system, so 60 substeps is the minimum here (vs 38 without it); 150 keeps a ~2.5x margin.",
+  "description": "Mass-spring drop with the per-tet volume penalty (Stage M2): same block, drop and springs as drop_ms.json, plus kv = 1e5 Pa. The penalty stiffens the explicit system, so 60 substeps is the minimum here (vs 38 without it); 150 keeps a ~2.5x margin. Frictionless ground: the M1-Q1 captures were made before friction existed (Stage C1).",
   "jello": { "size": [0.1, 0.1, 0.1], "cells": [8, 8, 8], "origin": [-0.05, 0.1, -0.05], "density": 1050 },
   "solver": "mass_spring",
   "mass_spring": { "ks": 300, "kd": 0.02, "substeps": 150, "kv": 1e5, "volume": true },
-  "ground": { "y": 0.0, "friction": 0.5 }
+  "ground": { "y": 0.0, "friction": 0.0 }
 }

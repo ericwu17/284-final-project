@@ -270,8 +270,23 @@ Both use the same geometric quantities (`tetVolume`, `tetVolumeGradients` in `te
   - **Mass-spring** (after the position update): if `phi < 0`, project `x -= phi·n`. Then, with relative velocity `v_r = v − u`: `vn = v_r·n`, `vt = v_r − vn·n`. If `vn < 0`, set `vn = 0` and reduce `vt` by `μ|Δvn|` (clamped at zero, Coulomb). Then `v = u + vn·n + vt`.
   - **XPBD** (inside each substep): project, then apply position-level friction. Let `Δt_disp` = tangential displacement of `(x − p)` relative to the collider's motion `u·h`. If `|Δt_disp| < μ_s·|phi|`, cancel it (static). Otherwise scale it down by `μ_k·|phi| / |Δt_disp|`.
 - **Verify:** a block dropped with sideways initial velocity slides and stops sooner as μ increases. μ = 0 slides forever.
-- **Capture:** `C1-01`: three clips with μ = 0, 0.3, 0.8, combined with `--hstack`.
+- **Capture:**
+  - `C1-01` three clips with μ = 0, 0.3, 0.8 (XPBD), combined with `--hstack`.
+  - `C1-02` filmstrip of C1-01.
+  - `C1-03` slide distance and tipping vs μ, both solvers, against Coulomb's law.
 - **Done when:** both solvers use the same `Collider` API, which lets C2 plug in directly.
+- **Built:**
+  - `colliders.{h,cpp}`: one contact rule, two levels. Project out of the collider, remove the normal motion into it (inelastic), then Coulomb: shrink the tangential motion relative to the collider by at most μ × the normal correction, sticking if that stops it. `resolveContactsVelocityLevel` (mass-spring; normal correction = removed normal velocity) and `resolveContactsPositionLevel` (XPBD; normal correction = penetration depth, motion = `x − prev − u·h`). One μ serves as static and kinetic.
+  - Scene keys: `jello.velocity` (initial velocity; R resets to it) and `camera` {`target`, `distance`} (viewer framing).
+  - Viewer: ground grid every half block width (drawn with the Wireframe shader; the quad uses polygon offset so the lines win the depth test).
+  - `make_video.sh --hstack` takes any number of clips, and labels them without `drawtext` (matplotlib PNG overlay).
+  - Scenes `slide_ms.json` / `slide_xpbd.json` (block on the ground at 1 m/s, μ = 0.3). `scripts/plot_friction.py` sweeps μ.
+  - **The four drop scenes now say `"friction": 0.0`.** Their old `0.5` was never used, and setting 0 keeps every M1–Q1 capture reproducible (verified: identical metrics CSVs).
+- **Verified:** with μ = 0 the drops reproduce the Q1-01 runs exactly (every CSV cell). μ = 0 slides at constant speed (1500 mm in 1.5 s).
+- **Findings:**
+  - μ ≤ 0.5: both solvers stop within 1.5% of the rigid-block distance v0²/(2μg), and the COM follows the predicted parabola (C1-03).
+  - μ ≥ 0.6: the soft block pitches forward onto its front edge and stops short of the prediction. A rigid cube needs μ > 1 to tip; this one tips over at μ = 0.7 (XPBD, 50 substeps) or 0.8 (mass-spring, 400 substeps) because it shears forward first.
+  - The tipping threshold is not converged: mass-spring at 150–300 substeps rocks back (max pitch 27°→38° rising with substeps) and tips only at 400. Use ≥ 400 mass-spring substeps, or XPBD, for high-friction scenes such as C2.
 
 ### Stage C2: Kinematic shaking plate (Day 4)
 

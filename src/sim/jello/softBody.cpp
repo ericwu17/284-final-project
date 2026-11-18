@@ -16,7 +16,7 @@ SoftBody::SoftBody(const TetMesh &mesh, double density) : mesh_(mesh), density_(
 
 void SoftBody::reset() {
   x = mesh_.rest;
-  v.assign(mesh_.numVerts(), Vector3D(0, 0, 0));
+  v.assign(mesh_.numVerts(), initialVelocity);
 }
 
 double SoftBody::totalMass() const {

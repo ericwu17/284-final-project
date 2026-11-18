@@ -40,15 +40,11 @@ void XPBDBody::substep(double h, double t, const SimContext &ctx) {
   solveEdges(h);
   if (p.volume) solveVolumes(h);
 
-  // Contacts: project penetrating vertices back onto the surface. The
-  // velocity update below then has no component into the surface, so
-  // contact is inelastic, as in the mass-spring solver. Friction: Stage C1.
-  for (const Collider *c : ctx.colliders) {
-    for (int i = 0; i < nv; i++) {
-      ContactQuery q = c->query(x[i], t + h);
-      if (q.phi < 0) x[i] -= q.phi * q.normal;
-    }
-  }
+  // Contacts (shared model, colliders.h): project penetrating vertices back
+  // onto the surface, then position-level Coulomb friction. The velocity
+  // update below then has no component into the surface, so contact is
+  // inelastic, as in the mass-spring solver.
+  resolveContactsPositionLevel(x, prev, ctx.colliders, t + h, h);
 
   for (int i = 0; i < nv; i++) v[i] = (x[i] - prev[i]) / h;
 }
@@ -78,7 +74,7 @@ void XPBDBody::solveEdges(double h) {
 
   // Alternate the sweep direction every substep (symmetric Gauss-Seidel). A
   // fixed order biases each pass toward the last-solved edges; on a symmetric
-  // drop that bias shows up as a spurious spin on the frictionless ground.
+  // drop that bias shows up as a spurious spin on a frictionless ground.
   const size_t m = mesh_.edges.size();
   forwardSweep = !forwardSweep;
   for (size_t k = 0; k < m; k++) {

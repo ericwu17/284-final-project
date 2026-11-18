@@ -6,10 +6,12 @@
 #     <png_dir> holds 00000.png, 00001.png, ... (as written by clothsim's V key
 #     or -R option, or by the path tracer render scripts). fps defaults to 30.
 #
-# Side-by-side comparison (e.g. mass-spring vs XPBD):
-#   scripts/make_video.sh --hstack <out.mp4> <a.mp4> [label_a] <b.mp4> [label_b]
-#     Labels are burned in only if this ffmpeg has the drawtext filter
-#     (Homebrew's default ffmpeg does not); otherwise they are skipped.
+# Side-by-side comparison (e.g. mass-spring vs XPBD), two or more clips:
+#   scripts/make_video.sh --hstack <out.mp4> <a.mp4> [label_a] <b.mp4> [label_b] ...
+#     Clips are scaled to the same height and cut to the shortest. Labels go
+#     in the top-left corner (drawtext if this ffmpeg has it, else a PNG made
+#     with matplotlib and overlaid). For 3+ clips, MAX_WIDTH=1920 keeps
+#     each panel readable.
 #
 # Environment:
 #   MAX_WIDTH  Downscale frames wider than this (default 1280; 0 keeps full size).
@@ -41,27 +43,56 @@ label_filter() { # $1 = label text
 
 if [[ "${1:-}" == "--hstack" ]]; then
   shift
-  [[ $# -ge 3 ]] || die "usage: --hstack <out.mp4> <a.mp4> [label_a] <b.mp4> [label_b]"
-  out="$1"; a="$2"
-  if [[ "$3" == *.mp4 || "$3" == *.mov ]]; then
-    label_a=""; b="$3"; label_b="${4:-}"
-  else
-    label_a="$3"; b="${4:-}"; label_b="${5:-}"
-  fi
-  [[ -f "$a" && -f "$b" ]] || die "input videos not found: $a $b"
+  [[ $# -ge 3 ]] || die "usage: --hstack <out.mp4> <a.mp4> [label_a] <b.mp4> [label_b] [<c.mp4> [label_c] ...]"
+  out="$1"; shift
+  # Each clip may be followed by a label (anything that is not a video file).
+  videos=(); labels=()
+  while [[ $# -gt 0 ]]; do
+    [[ "$1" == *.mp4 || "$1" == *.mov ]] || die "expected a video, got: $1"
+    [[ -f "$1" ]] || die "input video not found: $1"
+    videos+=("$1"); shift
+    if [[ $# -gt 0 && "$1" != *.mp4 && "$1" != *.mov ]]; then labels+=("$1"); shift; else labels+=(""); fi
+  done
+  n=${#videos[@]}
+  [[ $n -ge 2 ]] || die "--hstack needs at least two videos"
 
-  fa="[0:v]"; fb="[1:v]"
-  if [[ -n "$label_a$label_b" ]]; then
-    if has_drawtext; then
-      fa="[0:v]$(label_filter "$label_a")[la];[la]"; fb="[1:v]$(label_filter "$label_b")[lb];[lb]"
+  inputs=(); label_inputs=(); filter=""; extra=$n  # label images are inputs n, n+1, ...
+  tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
+  for ((i = 0; i < n; i++)); do
+    inputs+=(-i "${videos[$i]}")
+    filter+="[$i:v]scale=-2:720"
+    if [[ -n "${labels[$i]}" ]]; then
+      if has_drawtext; then
+        filter+=",$(label_filter "${labels[$i]}")[v$i];"
+      else
+        # No drawtext (Homebrew ffmpeg): draw the label as a PNG and overlay it.
+        python3 - "${labels[$i]}" "$tmp/label$i.png" <<'PY'
+import sys
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+fig = plt.figure(figsize=(0.01, 0.01), dpi=100)
+fig.text(0, 0, sys.argv[1], fontsize=26, color="white", family="sans-serif",
+         bbox=dict(facecolor="black", alpha=0.55, edgecolor="none", pad=6))
+fig.savefig(sys.argv[2], transparent=True, bbox_inches="tight", pad_inches=0.02)
+PY
+        # Loop the still at the clip's rate and end with the clip, so the
+        # overlay keeps the clip's frame count and timing.
+        fps=$(ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate -of csv=p=0 "${videos[$i]}")
+        label_inputs+=(-framerate "$fps" -loop 1 -i "$tmp/label$i.png")
+        filter+="[s$i];[s$i][$extra:v]overlay=20:20:shortest=1[v$i];"
+        extra=$((extra + 1))
+      fi
     else
-      echo "make_video.sh: warning: this ffmpeg lacks drawtext; labels skipped" >&2
+      filter+="[v$i];"
     fi
-  fi
-  # Match heights, stack, stop at the shorter clip.
-  filter="${fa}scale=-2:720[va];${fb}scale=-2:720[vb];[va][vb]hstack=inputs=2:shortest=1,$(scale_filter)"
+  done
+  for ((i = 0; i < n; i++)); do filter+="[v$i]"; done
+  # Match heights, stack, stop at the shortest clip.
+  filter+="hstack=inputs=$n:shortest=1,$(scale_filter)"
   mkdir -p "$(dirname "$out")"
-  ffmpeg -hide_banner -loglevel error -y -i "$a" -i "$b" -filter_complex "$filter" \
+  ffmpeg -hide_banner -loglevel error -y "${inputs[@]}" ${label_inputs[@]+"${label_inputs[@]}"} \
+    -filter_complex "$filter" \
     -c:v libx264 -crf "$CRF" -pix_fmt yuv420p -movflags +faststart "$out"
   echo "Wrote $out"
   exit 0

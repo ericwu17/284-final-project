@@ -39,7 +39,7 @@ class SoftBody {
   // Advance the state by one output frame (frameDt seconds). Solvers choose
   // their own substeps inside.
   virtual void step(double frameDt, const SimContext &ctx) = 0;
-  // Back to the rest pose, at rest.
+  // Back to the rest pose, moving at initialVelocity.
   virtual void reset();
   // Parameters the viewer may edit live (pointers into the solver).
   virtual std::vector<SolverParam> params() { return {}; }
@@ -52,6 +52,7 @@ class SoftBody {
   std::vector<Vector3D> v;       // velocities
   std::vector<double> mass;      // lumped: each tet gives density * V / 4 to each vertex
   std::vector<double> invMass;   // 1 / mass (0 would mean pinned)
+  Vector3D initialVelocity = Vector3D(0, 0, 0);  // every vertex, after reset()
 
  protected:
   TetMesh mesh_;

@@ -79,11 +79,13 @@ bool JelloScene::load(const std::string &path, std::string *error,
     json j;
     in >> j;
     for (const auto &o : overrides) applyOverride(j, o.first, o.second);
-    checkKeys(j, "scene", {"description", "jello", "solver", "mass_spring", "xpbd", "gravity", "ground"});
+    checkKeys(j, "scene", {"description", "jello", "solver", "mass_spring", "xpbd", "gravity", "ground",
+                           "camera"});
 
     if (has(j, "jello")) {
       const json &b = j["jello"];
-      checkKeys(b, "jello", {"size", "cells", "origin", "density"});
+      checkKeys(b, "jello", {"size", "cells", "origin", "density", "velocity"});
+      velocity = readVec3(b, "velocity", velocity);
       size = readVec3(b, "size", size);
       origin = readVec3(b, "origin", origin);
       density = readNumber(b, "density", density);
@@ -133,7 +135,18 @@ bool JelloScene::load(const std::string &path, std::string *error,
         hasGround = true;
         groundY = readNumber(g, "y", groundY);
         groundFriction = readNumber(g, "friction", groundFriction);
+        if (groundFriction < 0) throw std::runtime_error("\"friction\" must be >= 0");
       }
+    }
+
+    if (has(j, "camera")) {
+      const json &c = j["camera"];
+      checkKeys(c, "camera", {"target", "distance"});
+      if (has(c, "target")) {
+        hasCameraTarget = true;
+        cameraTarget = readVec3(c, "target", cameraTarget);
+      }
+      cameraDistance = readNumber(c, "distance", cameraDistance);
     }
   } catch (const std::exception &e) {
     *error = path + ": " + e.what();
@@ -149,11 +162,19 @@ TetMesh JelloScene::buildMesh() const {
 }
 
 std::unique_ptr<SoftBody> JelloScene::buildBody(std::string *error) const {
-  if (solver == "static") return std::make_unique<StaticBody>(buildMesh(), density);
-  if (solver == "mass_spring") return std::make_unique<MassSpringBody>(buildMesh(), density, massSpring);
-  if (solver == "xpbd") return std::make_unique<XPBDBody>(buildMesh(), density, xpbd);
-  *error = "unknown solver \"" + solver + "\" (available: static, mass_spring, xpbd)";
-  return nullptr;
+  std::unique_ptr<SoftBody> body;
+  if (solver == "static") body = std::make_unique<StaticBody>(buildMesh(), density);
+  else if (solver == "mass_spring") body = std::make_unique<MassSpringBody>(buildMesh(), density, massSpring);
+  else if (solver == "xpbd") body = std::make_unique<XPBDBody>(buildMesh(), density, xpbd);
+  if (!body) {
+    *error = "unknown solver \"" + solver + "\" (available: static, mass_spring, xpbd)";
+    return nullptr;
+  }
+  if (solver != "static") {
+    body->initialVelocity = velocity;
+    body->reset();
+  }
+  return body;
 }
 
 std::vector<std::unique_ptr<Collider>> JelloScene::buildColliders() const {
@@ -168,7 +189,8 @@ std::string JelloScene::toJson() const {
   j["jello"] = {{"size", vec(size)},
                 {"cells", json::array({cells[0], cells[1], cells[2]})},
                 {"origin", vec(origin)},
-                {"density", density}};
+                {"density", density},
+                {"velocity", vec(velocity)}};
   j["solver"] = solver;
   j["mass_spring"] = {{"ks", massSpring.ks}, {"kd", massSpring.kd},
                       {"substeps", massSpring.substeps}, {"kv", massSpring.kv},
@@ -179,6 +201,12 @@ std::string JelloScene::toJson() const {
   j["gravity"] = vec(gravity);
   if (hasGround) j["ground"] = {{"y", groundY}, {"friction", groundFriction}};
   else j["ground"] = nullptr;
+  if (hasCameraTarget || cameraDistance > 0) {
+    json cam = json::object();
+    if (hasCameraTarget) cam["target"] = vec(cameraTarget);
+    if (cameraDistance > 0) cam["distance"] = cameraDistance;
+    j["camera"] = cam;
+  }
   return j.dump(2);
 }
 

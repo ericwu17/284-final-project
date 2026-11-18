@@ -18,14 +18,18 @@ namespace Jello {
 //   {
 //     "description": "free text, ignored",
 //     "jello":  { "size": [0.1, 0.1, 0.1], "cells": [8, 8, 8],
-//                 "origin": [-0.05, 0.1, -0.05], "density": 1050 },
+//                 "origin": [-0.05, 0.1, -0.05], "density": 1050,
+//                 "velocity": [0, 0, 0] },
 //     "solver": "mass_spring",
 //     "mass_spring": { "ks": 300, "kd": 0.02, "substeps": 100, "kv": 1e5, "volume": true },
 //     "xpbd":   { "edge_compliance": 0.00333, "edge_damping": 0.02, "substeps": 100,
 //                 "volume_compliance": 1e-5, "volume": true },
 //     "gravity": [0, -9.8, 0],
-//     "ground": { "y": 0.0, "friction": 0.5 }
+//     "ground": { "y": 0.0, "friction": 0.5 },
+//     "camera": { "target": [0.1, 0.05, 0], "distance": 0.6 }
 //   }
+// "camera" only affects the viewer: what the presets look at, and from how
+// far (default: the block and the ground below it).
 // Units are SI (meters, kg/m^3), Y is up. Every field is optional and
 // defaults to the values below; unknown keys are an error, to catch typos.
 struct JelloScene {
@@ -33,6 +37,7 @@ struct JelloScene {
   int cells[3] = {8, 8, 8};
   Vector3D origin = Vector3D(-0.05, 0.0, -0.05);  // minimum corner of the block
   double density = 1050;                          // kg/m^3
+  Vector3D velocity = Vector3D(0, 0, 0);          // initial velocity of every vertex (m/s)
 
   std::string solver = "static";  // "static", "mass_spring", or "xpbd"
   MassSpringParams massSpring;
@@ -42,7 +47,11 @@ struct JelloScene {
 
   bool hasGround = true;
   double groundY = 0.0;
-  double groundFriction = 0.5;
+  double groundFriction = 0.5;  // Coulomb mu (static = kinetic)
+
+  bool hasCameraTarget = false;
+  Vector3D cameraTarget;
+  double cameraDistance = 0;  // 0: viewer default
 
   // Parses `path`, then applies overrides: each pair is a dotted key and a
   // JSON value, e.g. {"mass_spring.ks", "1000"} or {"solver", "\"static\""}

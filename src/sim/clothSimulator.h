@@ -34,6 +34,13 @@ public:
   // Jello mode: pause when the stability check fails (default on). Off lets
   // you watch (and record) a blow-up.
   void setPauseOnInstability(bool on) { pause_on_instability = on; }
+  // Jello mode: what the camera presets look at and from how far (the scene's
+  // "camera" key). distance <= 0 keeps the default. Call before init().
+  void setViewFraming(bool has_target, const CGL::Vector3D &target, double distance) {
+    has_view_target = has_target;
+    view_target = target;
+    view_distance_override = distance;
+  }
   // Gravity for the simulation (and the GUI boxes). Call before init().
   void setGravity(const CGL::Vector3D &g) { gravity = g; }
   virtual bool isAlive();
@@ -92,6 +99,7 @@ private:
   void drawBodyWireframe(GLShader &shader);
   void drawBodySurface(GLShader &shader);
   void drawGround(GLShader &shader);
+  void drawGroundGrid(GLShader &shader);
   void drawSurfaceEdges(GLShader &wireframe_shader);
   
   void load_shaders();
@@ -134,6 +142,9 @@ private:
   CGL::Vector3D scene_center;  // block center at rest; camera target
   double scene_size = 1;       // largest block side; scales camera and light
   CGL::Vector3D light_pos = CGL::Vector3D(0.5, 2, 2);
+  bool has_view_target = false;
+  CGL::Vector3D view_target;
+  double view_distance_override = 0;
   Jello::MetricsLogger metrics_log;
   int metrics_frame = 0;         // rows written after row 0
   double metrics_t0 = 0;         // sim_time when logging started

@@ -74,6 +74,7 @@ Then turn the frames into a video and log it (run from the repo root):
 ```sh
 scripts/make_video.sh out/capture/my_run media/S0_baseline/S0-03_cloth-on-sphere.mp4
 scripts/make_video.sh --hstack media/X1_xpbd/X1-04_compare.mp4 a.mp4 "Mass-spring" b.mp4 "XPBD"
+MAX_WIDTH=1920 scripts/make_video.sh --hstack out.mp4 a.mp4 "mu = 0" b.mp4 "mu = 0.3" c.mp4 "mu = 0.8"  # any number
 scripts/log_capture.py media/S0_baseline/S0-03_cloth-on-sphere.mp4 \
     --caption "Figure caption..." --cmd "command that made it" --use report,video
 ```

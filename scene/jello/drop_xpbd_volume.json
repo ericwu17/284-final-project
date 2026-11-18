@@ -1,7 +1,7 @@
 {
-  "description": "XPBD drop with tet volume constraints (Stage X2): same block, drop and edge material as drop_xpbd.json, plus volume compliance 1e-6 1/Pa (as stiff as a 1e6 Pa penalty, 10x the mass-spring kv). Stable from 22 substeps; 50 keeps the worst volume error under the proposal's 1% (0.90%). Mass-spring needs ~400 substeps for this volume stiffness.",
+  "description": "XPBD drop with tet volume constraints (Stage X2): same block, drop and edge material as drop_xpbd.json, plus volume compliance 1e-6 1/Pa (as stiff as a 1e6 Pa penalty, 10x the mass-spring kv). Stable from 22 substeps; 50 keeps the worst volume error under the proposal's 1% (0.90%). Mass-spring needs ~400 substeps for this volume stiffness. Frictionless ground: the M1-Q1 captures were made before friction existed (Stage C1).",
   "jello": { "size": [0.1, 0.1, 0.1], "cells": [8, 8, 8], "origin": [-0.05, 0.1, -0.05], "density": 1050 },
   "solver": "xpbd",
   "xpbd": { "edge_compliance": 0.0033333333, "edge_damping": 0.02, "substeps": 50, "volume_compliance": 1e-6, "volume": true },
-  "ground": { "y": 0.0, "friction": 0.5 }
+  "ground": { "y": 0.0, "friction": 0.0 }
 }

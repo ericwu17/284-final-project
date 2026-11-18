@@ -586,6 +586,8 @@ int main(int argc, char **argv) {
     app->loadSoftBody(jello_body.get(), jello_collider_ptrs, jello_scene.hasGround, jello_scene.groundY);
     app->setPauseOnInstability(!ignore_instability);
     app->setGravity(jello_scene.gravity);
+    app->setViewFraming(jello_scene.hasCameraTarget, jello_scene.cameraTarget,
+                        jello_scene.cameraDistance);
   }
   if (!shader_name.empty() && !app->setShaderByName(shader_name)) {
     std::cout << "Warn: no shader named \"" << shader_name << "\"" << std::endl;
