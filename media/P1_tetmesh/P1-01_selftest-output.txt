@@ -1,0 +1,22 @@
+Tet mesh selftest: 10 cm box, 5-tet split per cell (mirrored by cell parity)
+
+grid        verts    tets   edges  surf-tri surf-vert   V-E+F   vol err  surf err       ms  result
+--------------------------------------------------------------------------------------------------------
+1x1x1           8       5      18        12         8       2   0.0e+00   0.0e+00     0.01  PASS
+2x2x2          27      40      90        48        26       2   6.5e-16   2.2e-16     0.02  PASS
+3x5x2          72     150     283       124        64       2   1.3e-15   2.2e-16     0.06  PASS
+4x8x6         315     960    1482       416       210       2   1.6e-14   1.6e-14     0.32  PASS
+8x8x8         729    2560    3672       768       386       2   2.4e-14   1.8e-14     0.77  PASS
+12x12x12     2197    8640   11700      1728       866       2   1.2e-13   1.2e-13     2.67  PASS
+16x16x16     4913   20480   26928      3072      1538       2   3.7e-13   3.9e-13     6.03  PASS
+20x20x20     9261   40000   51660      4800      2402       2   3.3e-13   2.8e-13    11.87  PASS
+
+Checks per mesh: vertex/tet/edge/surface counts match the grid formulas
+(edges = cell edges + one diagonal per lattice face, i.e. conforming);
+every tet has positive volume (cell/6 corner, cell/3 central); tet volumes
+sum to the box volume; the surface encloses the same volume (divergence
+theorem); every directed surface edge appears once with its reverse
+(closed, consistently wound 2-manifold); Euler characteristic is 2; and
+every surface normal points out of the box.
+
+OK: 8 of 8 meshes passed

@@ -84,3 +84,16 @@ endif(APPLE)
 
 # Install to project root
 install(TARGETS clothsim DESTINATION ${Jello_SOURCE_DIR})
+
+#-------------------------------------------------------------------------------
+# Jello simulation core (no OpenGL / nanogui), shared by clothsim and jellosim
+#-------------------------------------------------------------------------------
+add_library(jello_core STATIC
+    jello/tetMesh.cpp
+)
+target_include_directories(jello_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(jello_core PUBLIC CGL)
+
+# Headless command-line driver: ./jellosim --selftest
+add_executable(jellosim jelloMain.cpp)
+target_link_libraries(jellosim jello_core)

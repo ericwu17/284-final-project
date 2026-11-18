@@ -141,8 +141,8 @@ Each stage lists: **Build** (what to write), **Verify** (how you know it's right
   - the divergence-theorem volume of the surface equals the sum of tet volumes;
   - all surface normals point outward.
 - **Capture:**
-  - `P1-01` selftest output (text) for 2³, 8³, and 20³ (record tet counts, including about 20k tets at a 12³–14³ scale for the later performance study).
-  - `P1-02`/`P1-03` come from P2 (they need the viewer).
+  - `P1-01` selftest output (text) for grids from 1³ to 20³ (16³ = 20,480 tets is the mesh for the later performance study).
+  - `P1-02` decomposition figure from `scripts/plot_tetmesh.py`: exploded even and odd cells, the boundary surface, and a cutaway.
 - **Done when:** the selftest passes for several resolutions, including non-cubic ones such as 4×8×6.
 
 ### Stage P2: Viewer shows the soft body (Day 1–2)
@@ -155,9 +155,9 @@ Each stage lists: **Build** (what to write), **Verify** (how you know it's right
   - Ground and plate draw through a small GL wrapper that lives outside `jello_core`.
 - **Verify:** the static block looks right in all three shaders. Toggling between wireframe and surface works.
 - **Capture:**
-  - `P1-02` tet wireframe of a 4³ block (sparse enough to read).
-  - `P1-03` 8³ surface with the Normal shader.
-  - `P1-04` cutaway: draw only tets with centroid z < 0.5·Lz to show the interior tets. This is a good report figure.
+  - `P2-01` tet wireframe of a 4³ block (sparse enough to read).
+  - `P2-02` 8³ surface with the Normal shader.
+  - `P2-03` cutaway in the viewer: draw only tets with centroid z < 0.5·Lz to show the interior tets.
 - **Done when:** both solvers (once they exist) plug in without viewer changes.
 
 ### Stage M1: Mass-spring with gravity and ground (Day 2)
@@ -309,8 +309,8 @@ Unit test: compare these gradients against finite differences on random tets (`-
 
 ### Stage I2: Milestone deliverables (Day 5)
 
-- **Report** (SIGGRAPH template, about 1–2 pages): pipeline diagram; P1-04 (cutaway); M1-01/X1-01 stills; Q1-01 (volume error ± volume term); R1-02 (depth sweep); R3-01 (absorption sweep); R3-02 (hero); a short table of the volume errors and ms per frame we have so far; progress against the plan; and the plan for Weeks 3–4 (calibration, sweeps, appearance tuning).
-- **1-minute video:** 0–8 s title and tet mesh (P1-02, P1-04) → 8–25 s GUI side-by-side drop and shake (C2-03, plus M2-01/X2-01 volume on/off) → 25–50 s rendered sequences (I1-05, I1-06) → 50–60 s plots (Q1-01) and next steps. Build it with ffmpeg concat plus drawtext captions, or any editor. Log it as `I2-01`.
+- **Report** (SIGGRAPH template, about 1–2 pages): pipeline diagram; P1-02 (tet decomposition); M1-01/X1-01 stills; Q1-01 (volume error ± volume term); R1-02 (depth sweep); R3-01 (absorption sweep); R3-02 (hero); a short table of the volume errors and ms per frame we have so far; progress against the plan; and the plan for Weeks 3–4 (calibration, sweeps, appearance tuning).
+- **1-minute video:** 0–8 s title and tet mesh (P1-02, P2-01, P2-03) → 8–25 s GUI side-by-side drop and shake (C2-03, plus M2-01/X2-01 volume on/off) → 25–50 s rendered sequences (I1-05, I1-06) → 50–60 s plots (Q1-01) and next steps. Build it with ffmpeg concat plus drawtext captions, or any editor. Log it as `I2-01`.
 - **Slides (2–3):** (1) what we built, with the pipeline diagram and hero still; (2) results so far (volume plot and side-by-side GIF); (3) what's next. Log the exported PDF as `I2-02`.
 
 ---
