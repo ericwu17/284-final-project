@@ -73,7 +73,7 @@ bool JelloScene::load(const std::string &path, std::string *error,
     json j;
     in >> j;
     for (const auto &o : overrides) applyOverride(j, o.first, o.second);
-    checkKeys(j, "scene", {"description", "jello", "solver", "mass_spring", "ground"});
+    checkKeys(j, "scene", {"description", "jello", "solver", "mass_spring", "xpbd", "ground"});
 
     if (has(j, "jello")) {
       const json &b = j["jello"];
@@ -100,6 +100,16 @@ bool JelloScene::load(const std::string &path, std::string *error,
       massSpring.kd = readNumber(m, "kd", massSpring.kd);
       massSpring.substeps = (int)readNumber(m, "substeps", massSpring.substeps);
       if (massSpring.substeps < 1) throw std::runtime_error("\"substeps\" must be >= 1");
+    }
+
+    if (has(j, "xpbd")) {
+      const json &x = j["xpbd"];
+      checkKeys(x, "xpbd", {"edge_compliance", "edge_damping", "substeps"});
+      xpbd.edgeCompliance = readNumber(x, "edge_compliance", xpbd.edgeCompliance);
+      xpbd.edgeDamping = readNumber(x, "edge_damping", xpbd.edgeDamping);
+      xpbd.substeps = (int)readNumber(x, "substeps", xpbd.substeps);
+      if (xpbd.substeps < 1) throw std::runtime_error("\"substeps\" must be >= 1");
+      if (xpbd.edgeCompliance < 0) throw std::runtime_error("\"edge_compliance\" must be >= 0");
     }
 
     if (has(j, "ground")) {
@@ -129,7 +139,8 @@ TetMesh JelloScene::buildMesh() const {
 std::unique_ptr<SoftBody> JelloScene::buildBody(std::string *error) const {
   if (solver == "static") return std::make_unique<StaticBody>(buildMesh(), density);
   if (solver == "mass_spring") return std::make_unique<MassSpringBody>(buildMesh(), density, massSpring);
-  *error = "unknown solver \"" + solver + "\" (available: static, mass_spring)";
+  if (solver == "xpbd") return std::make_unique<XPBDBody>(buildMesh(), density, xpbd);
+  *error = "unknown solver \"" + solver + "\" (available: static, mass_spring, xpbd)";
   return nullptr;
 }
 

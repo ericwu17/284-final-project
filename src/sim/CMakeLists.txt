@@ -96,6 +96,7 @@ add_library(jello_core STATIC
     jello/colliders.cpp
     jello/metrics.cpp
     jello/massSpringBody.cpp
+    jello/xpbdBody.cpp
 )
 target_include_directories(jello_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(jello_core PUBLIC CGL)

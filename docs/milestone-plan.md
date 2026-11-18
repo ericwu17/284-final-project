@@ -62,7 +62,7 @@ CMake: add a `jello_core` static library in `src/sim/CMakeLists.txt` and link it
   "jello":  { "size": [0.1, 0.1, 0.1], "cells": [8, 8, 8], "origin": [-0.05, 0.15, -0.05], "density": 1050 },
   "solver": "xpbd",
   "mass_spring": { "ks": 300, "kd": 0.02, "kv": 1e5, "volume": true, "substeps": 100 },
-  "xpbd":   { "edge_compliance": 1e-4, "volume_compliance": 0.0, "volume": true, "substeps": 20, "damping": 1.0 },
+  "xpbd":   { "edge_compliance": 0.00333, "edge_damping": 0.02, "volume_compliance": 0.0, "volume": true, "substeps": 100 },
   "ground": { "y": 0.0, "friction": 0.5 },
   "plate":  { "size": [0.25, 0.01, 0.25], "center": [0, 0.005, 0], "friction": 0.6,
               "shake": { "axis": [1, 0, 0], "amplitude": 0.015, "frequency": 3.0, "start": 1.0 } },
@@ -187,17 +187,23 @@ Each stage lists: **Build** (what to write), **Verify** (how you know it's right
 
 ### Stage X1: XPBD with distance constraints (Day 2)
 
-- **Build:** `XPBDBody`. Per frame, run `n` substeps with `h = frameDt / n`:
+- **Build:** `XPBDBody`, small-steps form: per frame, `n` substeps with `h = frameDt / n`:
   1. `v += h·g`; `p = x`; `x += h·v`.
-  2. For each edge constraint `C = |x_a − x_b| − L0`:
-     `Δλ = −C / (w_a + w_b + α̃)` with `α̃ = α/h²`; `x_a += w_a Δλ ∇C`, `x_b −= w_b Δλ ∇C`. Use one iteration per substep and reset λ each substep (the small-steps form). `w = 1/m`.
+  2. One Gauss-Seidel pass over the edges, alternating direction every substep (symmetric, removes ordering bias): `C = |x_a − x_b| − L0`, `Δλ = (−C − γ ∇C·(x − p)) / ((1 + γ)(w_a + w_b) + α/h²)`, with constraint damping `γ = αβ/h` (Macklin et al. 2016) instead of global velocity damping, which would also slow the free fall.
   3. Collision projection (ground) in the same substep.
-  4. `v = (x − p)/h`, then damping `v *= max(0, 1 − damping·h)`.
-- **Verify:** with α = 0 the block is rigid-ish. Raising α makes it softer. It is stable at 20 substeps with any α ≥ 0, which is the property we are comparing against M1. It sanity-checks against the qualitative behavior of Ten Minute Physics #10 (don't port the code).
+  4. `v = (x − p)/h`.
+- **Matched material:** compliance α = 1/ks and damping β = kd describe the same material as the mass-spring solver, so differences come from the solver: `scene/jello/drop_xpbd.json` uses α = 1/300, β = 0.02.
+- **Findings:**
+  - With 400 substeps XPBD reproduces the mass-spring bounces; with fewer it dissipates energy numerically (bounces shrink, settles ~0.9 s vs ~1.5 s).
+  - It never produces NaN, but distance constraints alone need ≥ 40 substeps for the drop (about the mass-spring limit of 38). Below that, the bottom crushes and the block folds into a wad: folding keeps edge lengths, so nothing preserves volume. Default: 100 substeps.
+  - The stable step vs stiffness is not a power law (best near k = 1000 N/m). XPBD wins on substeps at high stiffness, but costs ~5× more per substep (sequential Gauss-Seidel), so it is still slower per frame. X2's volume constraints should change this picture; re-run the sweep then.
 - **Capture:**
-  - `X1-01` same drop, camera, and duration as `M1-01`.
-  - `X1-02` compliance sweep: three quick clips (stiff, medium, soft), later combined with `--hstack`.
-- **Done when:** the drop runs stably for every compliance value tried.
+  - `X1-01` XPBD drop (same scene, camera and duration as `M1-01`).
+  - `X1-02` too few substeps (10): collapse and folding, the opposite failure to `M1-03`.
+  - `X1-03` side by side, mass-spring vs XPBD.
+  - `X1-04` center-of-mass and height traces: XPBD at 400/100/40 substeps vs mass-spring.
+  - `X1-05` largest stable time step vs stiffness, XPBD vs mass-spring.
+- **Done when:** the drop runs without NaN for every compliance tried, and its behavior vs substeps is understood.
 
 ### Stage M2 / X2: Volume terms (Day 3)
 

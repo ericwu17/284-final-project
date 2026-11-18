@@ -171,11 +171,13 @@ int run(int argc, char **argv) {
   const int frames = (int)std::lround(seconds * fps);
   double dt = 1.0 / fps;
   if (scene.solver == "mass_spring") dt /= scene.massSpring.substeps;
+  if (scene.solver == "xpbd") dt /= scene.xpbd.substeps;
 
   if (!quiet) {
     printf("%s: solver %s, %zu tets, mass %.3f kg, dt %.3g s\n", scenePath.c_str(),
            body->name().c_str(), body->mesh().tets.size(), body->totalMass(), dt);
-    printf("%8s %10s %10s %10s\n", "t (s)", "com y (m)", "height (m)", "bbox ratio");
+    printf("%8s %10s %10s %10s %10s %10s %9s %9s\n", "t (s)", "com y (m)", "height (m)",
+           "bbox ratio", "com x (mm)", "com z (mm)", "yaw (deg)", "tilt (deg)");
   }
 
   Stability st;
@@ -190,8 +192,14 @@ int run(int argc, char **argv) {
     if (!quiet && ((frame + 1) % every == 0 || !st.ok)) {
       double lo = INFINITY, hi = -INFINITY;
       for (const Vector3D &p : body->x) { lo = std::min(lo, p.y); hi = std::max(hi, p.y); }
-      printf("%8.3f %10.4f %10.4f %10.3f\n", (frame + 1) / fps, centerOfMass(*body).y, hi - lo,
-             st.bboxRatio);
+      // Orientation of the top front edge (rest direction +x): yaw is its
+      // rotation about the vertical axis, tilt its angle above horizontal.
+      const TetMesh &m = body->mesh();
+      Vector3D u = body->x[m.vertexId(m.nx, m.ny, m.nz)] - body->x[m.vertexId(0, m.ny, m.nz)];
+      double yaw = atan2(-u.z, u.x) * 180 / M_PI, tilt = asin(u.y / u.norm()) * 180 / M_PI;
+      Vector3D com = centerOfMass(*body);
+      printf("%8.3f %10.4f %10.4f %10.3f %10.3f %10.3f %9.3f %9.3f\n", (frame + 1) / fps, com.y,
+             hi - lo, st.bboxRatio, com.x * 1000, com.z * 1000, yaw, tilt);
     }
     if (!st.ok) break;
   }

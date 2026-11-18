@@ -8,6 +8,7 @@
 
 #include "colliders.h"
 #include "massSpringBody.h"
+#include "xpbdBody.h"
 #include "softBody.h"
 #include "tetMesh.h"
 
@@ -20,6 +21,7 @@ namespace Jello {
 //                 "origin": [-0.05, 0.1, -0.05], "density": 1050 },
 //     "solver": "mass_spring",
 //     "mass_spring": { "ks": 300, "kd": 0.02, "substeps": 100 },
+//     "xpbd":   { "edge_compliance": 0.00333, "edge_damping": 0.02, "substeps": 100 },
 //     "ground": { "y": 0.0, "friction": 0.5 }
 //   }
 // Units are SI (meters, kg/m^3), Y is up. Every field is optional and
@@ -30,8 +32,9 @@ struct JelloScene {
   Vector3D origin = Vector3D(-0.05, 0.0, -0.05);  // minimum corner of the block
   double density = 1050;                          // kg/m^3
 
-  std::string solver = "static";  // "static" or "mass_spring"
+  std::string solver = "static";  // "static", "mass_spring", or "xpbd"
   MassSpringParams massSpring;
+  XPBDParams xpbd;
 
   bool hasGround = true;
   double groundY = 0.0;
