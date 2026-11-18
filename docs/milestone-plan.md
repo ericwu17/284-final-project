@@ -61,7 +61,7 @@ CMake: add a `jello_core` static library in `src/sim/CMakeLists.txt` and link it
 {
   "jello":  { "size": [0.1, 0.1, 0.1], "cells": [8, 8, 8], "origin": [-0.05, 0.15, -0.05], "density": 1050 },
   "solver": "xpbd",
-  "mass_spring": { "ks": 500, "kd": 0.5, "kv": 1e5, "volume": true, "substeps": 200 },
+  "mass_spring": { "ks": 300, "kd": 0.02, "kv": 1e5, "volume": true, "substeps": 100 },
   "xpbd":   { "edge_compliance": 1e-4, "volume_compliance": 0.0, "volume": true, "substeps": 20, "damping": 1.0 },
   "ground": { "y": 0.0, "friction": 0.5 },
   "plate":  { "size": [0.25, 0.01, 0.25], "center": [0, 0.005, 0], "friction": 0.6,
@@ -168,13 +168,21 @@ Each stage lists: **Build** (what to write), **Verify** (how you know it's right
   - Lumped mass: each tet gives ρV/4 to each of its 4 vertices.
   - One spring per tet edge: `f = ks (|d| − L0) d̂` plus damping along the spring, `kd ((v_b − v_a)·d̂) d̂`.
   - Semi-implicit Euler per substep: `v += dt·f/m`, then `x += dt·v`.
-  - Ground contact through the `Collider` interface (normal projection only for now; friction comes in C1).
-  - Stability guard: if `metrics.unstable()`, pause and print the reason.
-- **Verify:** the block falls, bounces, and comes to rest. The stable `dt` roughly follows `dt < 2√(m/k_eff)`: halving ks should allow about √2 larger dt. Total momentum is conserved with gravity off (a quick check).
+  - Ground contact through the `Collider` interface (`query(p, t)` → signed distance, normal, collider velocity): project out, remove the approaching normal velocity. Friction comes in C1.
+  - Stability guard (`checkStability`: NaN, inverted tet, bbox > 2× rest): the viewer pauses and prints the reason; `-U` keeps going so a blow-up can be recorded.
+  - Solvers list their tunable parameters (`SoftBody::params()`); the viewer builds its controls from that list.
+  - `jellosim --run SCENE --set key=value` (and `clothsim -O key=value`) for headless runs and parameter overrides; `scripts/stability_sweep.py` bisects the substep count to find the largest stable dt.
+- **Defaults (scene/jello/drop_ms.json):** ks = 300 N/m, kd = 0.02 N s/m, 100 substeps per 1/30 s frame. The first guesses were wrong in instructive ways:
+  - kd = 0.5 is unstable at dt = 0.33 ms. Explicit damping needs dt < 2m/c, and the block-corner vertices weigh only 1/17 of the mean vertex (one small tet each), so the limit is ~0.1 ms there.
+  - ks ≤ 200 inverts tets on landing from a 10 cm drop, whatever the time step. A spring lattice has no inversion resistance; M2's volume term is the fix.
+  - ks = 500 gives a ~15 Hz bounce and 0.5% sag; ks = 300 wobbles visibly. Calibration against real jello is Week 3.
+- **Verify:** the block falls, bounces and settles. Stable dt follows dt ∝ ks^(−1/2) (measured slope −0.48).
 - **Capture:**
-  - `M1-01` GUI recording of a drop, 3/4 view, Phong shader, 4 s.
-  - `M1-02` same drop in wireframe.
-  - `M1-03` an instability (dt too large or ks too high) blowing up. These failures are worth showing in the report.
+  - `M1-01` drop, Phong, 3/4 view, 4 s; `M1-02` same drop in wireframe.
+  - `M1-03` dt too large (30 substeps): corner vertices diverge first, then the mesh explodes (slow motion).
+  - `M1-04` ks too soft (150): stable integration, but the bottom layer inverts on landing.
+  - `M1-05` largest stable dt vs ks (log-log, with fit).
+  - `M1-06`/`M1-07` filmstrips of the drop and of the two failure modes, for the report.
 - **Done when:** an 8³ block drops and settles stably at 30 fps with a fixed substep count.
 
 ### Stage X1: XPBD with distance constraints (Day 2)

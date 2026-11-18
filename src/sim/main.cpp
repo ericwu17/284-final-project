@@ -156,6 +156,10 @@ void usageError(const char *binaryName) {
   printf("  -C     <INT>       Jello: camera preset 1 front, 2 three-quarter, 3 top.\n");
   printf("  -K                 Jello: start with the cutaway on.\n");
   printf("  -E                 Jello: start with the edge overlay on.\n");
+  printf("  -O     <KEY=VALUE> Jello: override a scene value, e.g. -O mass_spring.ks=1000\n");
+  printf("                     (repeatable; same as jellosim --set).\n");
+  printf("  -U                 Jello: keep running when the stability check fails\n");
+  printf("                     (default: pause), e.g. to record a blow-up.\n");
   printf("  -P     <STRING>    Save a screenshot of the first frame to this PNG\n");
   printf("                     and exit.\n");
   printf("\n");
@@ -431,9 +435,11 @@ int main(int argc, char **argv) {
   int camera_preset = 0;
   bool start_cutaway = false;
   bool start_edges = false;
+  bool ignore_instability = false;
+  std::vector<std::pair<std::string, std::string>> scene_overrides;
   std::string screenshot_path;
   
-  while ((c = getopt (argc, argv, "f:r:a:o:R:T:S:C:KEP:")) != -1) {
+  while ((c = getopt (argc, argv, "f:r:a:o:R:T:S:C:KEUO:P:")) != -1) {
     switch (c) {
       case 'f': {
         file_to_load_from = optarg;
@@ -488,6 +494,20 @@ int main(int argc, char **argv) {
         start_edges = true;
         break;
       }
+      case 'U': {
+        ignore_instability = true;
+        break;
+      }
+      case 'O': {
+        std::string kv = optarg;
+        size_t eq = kv.find('=');
+        if (eq == std::string::npos) {
+          std::cout << "Error: -O expects KEY=VALUE, got " << kv << std::endl;
+          return -1;
+        }
+        scene_overrides.push_back({kv.substr(0, eq), kv.substr(eq + 1)});
+        break;
+      }
       case 'P': {
         screenshot_path = optarg;
         break;
@@ -517,12 +537,16 @@ int main(int argc, char **argv) {
   bool jello_mode = Jello::JelloScene::isJelloScene(file_to_load_from);
   Jello::JelloScene jello_scene;
   std::unique_ptr<Jello::SoftBody> jello_body;
+  std::vector<std::unique_ptr<Jello::Collider>> jello_colliders;
+  std::vector<const Jello::Collider *> jello_collider_ptrs;
   if (jello_mode) {
     std::string error;
-    if (!jello_scene.load(file_to_load_from, &error) || !(jello_body = jello_scene.buildBody(&error))) {
+    if (!jello_scene.load(file_to_load_from, &error, scene_overrides) || !(jello_body = jello_scene.buildBody(&error))) {
       std::cout << "Error: " << error << std::endl;
       return -1;
     }
+    jello_colliders = jello_scene.buildColliders();
+    for (const auto &c : jello_colliders) jello_collider_ptrs.push_back(c.get());
     const Jello::TetMesh &mesh = jello_body->mesh();
     std::cout << "Jello: " << mesh.nx << "x" << mesh.ny << "x" << mesh.nz << " cells, "
               << mesh.numVerts() << " verts, " << mesh.tets.size() << " tets, "
@@ -551,7 +575,8 @@ int main(int argc, char **argv) {
   app->loadClothParameters(&cp);
   app->loadCollisionObjects(&objects);
   if (jello_mode) {
-    app->loadSoftBody(jello_body.get(), jello_scene.hasGround, jello_scene.groundY);
+    app->loadSoftBody(jello_body.get(), jello_collider_ptrs, jello_scene.hasGround, jello_scene.groundY);
+    app->setPauseOnInstability(!ignore_instability);
   }
   if (!shader_name.empty() && !app->setShaderByName(shader_name)) {
     std::cout << "Warn: no shader named \"" << shader_name << "\"" << std::endl;

@@ -26,8 +26,13 @@ public:
   void loadClothParameters(ClothParameters *cp);
   void loadCollisionObjects(vector<CollisionObject *> *objects);
   // Jello mode: draw and simulate a soft body instead of the cloth. Call
-  // before init(). The ground is drawn as a quad at ground_y if has_ground.
-  void loadSoftBody(Jello::SoftBody *body, bool has_ground, double ground_y);
+  // before init(). The colliders are passed to the solver every step; the
+  // ground is drawn as a quad at ground_y if has_ground.
+  void loadSoftBody(Jello::SoftBody *body, const vector<const Jello::Collider *> &colliders,
+                    bool has_ground, double ground_y);
+  // Jello mode: pause when the stability check fails (default on). Off lets
+  // you watch (and record) a blow-up.
+  void setPauseOnInstability(bool on) { pause_on_instability = on; }
   virtual bool isAlive();
   virtual void drawContents();
 
@@ -111,6 +116,9 @@ private:
   Jello::SoftBody *body = nullptr;
   bool has_ground = false;
   double ground_y = 0;
+  vector<const Jello::Collider *> jello_colliders;
+  bool pause_on_instability = true;
+  bool instability_reported = false;
   bool cutaway = false;
   bool show_edges = false;
   vector<std::array<int, 3>> cutaway_tris;   // surface of the kept tets

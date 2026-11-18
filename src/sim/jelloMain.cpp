@@ -1,8 +1,10 @@
 // jellosim: headless command-line driver for the jello simulator.
 //
-// Only mesh tools for now (Stage P1). Simulation and per-frame export are
-// added in later stages; see docs/milestone-plan.md.
+// Mesh selftest and dump (Stage P1), headless simulation with the stability
+// check (Stage M1). Per-frame export and metrics CSV come in later stages; see
+// docs/milestone-plan.md.
 
+#include <algorithm>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -12,9 +14,12 @@
 #include <string>
 #include <vector>
 
+#include "jello/jelloScene.h"
+#include "jello/metrics.h"
 #include "jello/tetMesh.h"
 
 using namespace Jello;
+using CGL::Vector3D;
 
 namespace {
 
@@ -27,6 +32,13 @@ void usage(const char *bin) {
   printf("  %s --dump-mesh NX NY NZ FILE.json\n", bin);
   printf("      Write a unit-cube mesh with NX x NY x NZ cells as JSON\n");
   printf("      (for scripts/plot_tetmesh.py).\n");
+  printf("  %s --run SCENE.json [--seconds T] [--set KEY=VALUE]... [--every N] [--quiet]\n", bin);
+  printf("      Simulate T seconds (default 3) at 30 output frames/s, checking\n");
+  printf("      stability every frame (NaN, inverted tet, bbox > 2x rest).\n");
+  printf("      --set overrides a scene value, e.g. --set mass_spring.ks=1000.\n");
+  printf("      --every N prints a row every N frames (default 15).\n");
+  printf("      Ends with one 'RESULT key=value ...' line. Exit status 0 if\n");
+  printf("      stable, 3 if unstable.\n");
 }
 
 int selftest() {
@@ -104,10 +116,99 @@ int dumpMesh(int nx, int ny, int nz, const char *path) {
   return 0;
 }
 
+Vector3D centerOfMass(const SoftBody &body) {
+  Vector3D c(0, 0, 0);
+  for (size_t i = 0; i < body.x.size(); i++) c += body.mass[i] * body.x[i];
+  return c / body.totalMass();
+}
+
+int run(int argc, char **argv) {
+  std::string scenePath;
+  double seconds = 3.0;
+  bool quiet = false;
+  int every = 15;  // print a row every this many frames
+  std::vector<std::pair<std::string, std::string>> overrides;
+  for (int i = 2; i < argc; i++) {
+    std::string a = argv[i];
+    if (a == "--seconds" && i + 1 < argc) {
+      seconds = atof(argv[++i]);
+    } else if (a == "--set" && i + 1 < argc) {
+      std::string kv = argv[++i];
+      size_t eq = kv.find('=');
+      if (eq == std::string::npos) {
+        fprintf(stderr, "--set expects KEY=VALUE, got %s\n", kv.c_str());
+        return 2;
+      }
+      overrides.push_back({kv.substr(0, eq), kv.substr(eq + 1)});
+    } else if (a == "--every" && i + 1 < argc) {
+      every = std::max(1, atoi(argv[++i]));
+    } else if (a == "--quiet") {
+      quiet = true;
+    } else if (scenePath.empty() && a[0] != '-') {
+      scenePath = a;
+    } else {
+      fprintf(stderr, "unknown argument %s\n", a.c_str());
+      return 2;
+    }
+  }
+  if (scenePath.empty()) {
+    fprintf(stderr, "--run needs a scene file\n");
+    return 2;
+  }
+
+  JelloScene scene;
+  std::string error;
+  std::unique_ptr<SoftBody> body;
+  if (!scene.load(scenePath, &error, overrides) || !(body = scene.buildBody(&error))) {
+    fprintf(stderr, "Error: %s\n", error.c_str());
+    return 2;
+  }
+  auto colliders = scene.buildColliders();
+  SimContext ctx;
+  for (const auto &c : colliders) ctx.colliders.push_back(c.get());
+
+  const double fps = 30.0;
+  const int frames = (int)std::lround(seconds * fps);
+  double dt = 1.0 / fps;
+  if (scene.solver == "mass_spring") dt /= scene.massSpring.substeps;
+
+  if (!quiet) {
+    printf("%s: solver %s, %zu tets, mass %.3f kg, dt %.3g s\n", scenePath.c_str(),
+           body->name().c_str(), body->mesh().tets.size(), body->totalMass(), dt);
+    printf("%8s %10s %10s %10s\n", "t (s)", "com y (m)", "height (m)", "bbox ratio");
+  }
+
+  Stability st;
+  double simMs = 0;
+  int frame = 0;
+  for (; frame < frames; frame++) {
+    ctx.time = frame / fps;
+    auto t0 = std::chrono::steady_clock::now();
+    body->step(1.0 / fps, ctx);
+    simMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+    st = checkStability(*body);
+    if (!quiet && ((frame + 1) % every == 0 || !st.ok)) {
+      double lo = INFINITY, hi = -INFINITY;
+      for (const Vector3D &p : body->x) { lo = std::min(lo, p.y); hi = std::max(hi, p.y); }
+      printf("%8.3f %10.4f %10.4f %10.3f\n", (frame + 1) / fps, centerOfMass(*body).y, hi - lo,
+             st.bboxRatio);
+    }
+    if (!st.ok) break;
+  }
+  int done = std::min(frame + 1, frames);
+
+  printf("RESULT solver=%s stable=%d seconds=%.4f fail_t=%s dt=%.6g ms_per_frame=%.4f reason=\"%s\"\n",
+         body->name().c_str(), st.ok ? 1 : 0, done / fps,
+         st.ok ? "none" : std::to_string((frame + 1) / fps).c_str(), dt, simMs / done,
+         st.reason.c_str());
+  return st.ok ? 0 : 3;
+}
+
 } // namespace
 
 int main(int argc, char **argv) {
   if (argc >= 2 && !strcmp(argv[1], "--selftest")) return selftest();
+  if (argc >= 2 && !strcmp(argv[1], "--run")) return run(argc, argv);
   if (argc == 6 && !strcmp(argv[1], "--dump-mesh"))
     return dumpMesh(atoi(argv[2]), atoi(argv[3]), atoi(argv[4]), argv[5]);
   usage(argv[0]);

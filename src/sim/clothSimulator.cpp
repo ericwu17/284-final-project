@@ -14,6 +14,7 @@
 #include "misc/camera_info.h"
 #include "misc/file_utils.h"
 #include "misc/frame_capture.h"
+#include "jello/metrics.h"
 #include "jello/tetMesh.h"
 // Needed to generate stb_image binaries. Should only define in exactly one source file importing stb_image.h.
 #define STB_IMAGE_IMPLEMENTATION
@@ -189,10 +190,15 @@ void ClothSimulator::loadClothParameters(ClothParameters *cp) { this->cp = cp; }
 
 void ClothSimulator::loadCollisionObjects(vector<CollisionObject *> *objects) { this->collision_objects = objects; }
 
-void ClothSimulator::loadSoftBody(Jello::SoftBody *body, bool has_ground, double ground_y) {
+void ClothSimulator::loadSoftBody(Jello::SoftBody *body,
+                                  const vector<const Jello::Collider *> &colliders,
+                                  bool has_ground, double ground_y) {
   this->body = body;
+  this->jello_colliders = colliders;
   this->has_ground = has_ground;
   this->ground_y = ground_y;
+  // Jello solvers count substeps per output frame of a 30 fps clip.
+  frames_per_sec = 30;
 }
 
 /**
@@ -214,10 +220,14 @@ void ClothSimulator::init() {
   camera_info.fClip = 10000;
 
   if (body) {
-    // Frame the block; scale the camera limits and the light to its size.
+    // Frame the block and the ground below it (for drop scenes, the whole
+    // fall); scale the camera limits and the light to that size.
     const Jello::TetMesh &mesh = body->mesh();
+    double top = mesh.origin.y + mesh.size.y;
+    double bottom = has_ground ? min(ground_y, mesh.origin.y) : mesh.origin.y;
     scene_center = mesh.origin + 0.5 * mesh.size;
-    scene_size = max(mesh.size.x, max(mesh.size.y, mesh.size.z));
+    scene_center.y = 0.5 * (top + bottom);
+    scene_size = max(top - bottom, max(mesh.size.x, mesh.size.z));
     canonical_view_distance = 2.8 * scene_size;
     scroll_rate = scene_size / 10;
     min_view_distance = 0.3 * scene_size;
@@ -362,7 +372,19 @@ void ClothSimulator::drawContents() {
       Jello::SimContext ctx;
       ctx.gravity = gravity;
       ctx.time = sim_time;
+      ctx.colliders = jello_colliders;
       body->step(1.0 / frames_per_sec, ctx);
+
+      Jello::Stability st = Jello::checkStability(*body);
+      if (!st.ok && !instability_reported) {
+        instability_reported = true;
+        std::cout << "[Jello] UNSTABLE at t = " << sim_time + 1.0 / frames_per_sec << " s: "
+                  << st.reason << (pause_on_instability ? " (paused; R resets)" : "") << std::endl;
+        if (pause_on_instability) {
+          is_paused = true;
+          stopRecording();  // a recording would otherwise wait forever
+        }
+      }
     } else {
       for (int i = 0; i < simulation_steps; i++) {
         cloth->simulate(frames_per_sec, simulation_steps, cp, external_accelerations, collision_objects);
@@ -876,7 +898,13 @@ bool ClothSimulator::keyCallbackEvent(int key, int scancode, int action,
       break;
     case 'r':
     case 'R':
-      if (body) body->reset(); else cloth->reset();
+      if (body) {
+        body->reset();
+        instability_reported = false;
+        if (!recording) sim_time = 0;  // keep the recording's time grid intact
+      } else {
+        cloth->reset();
+      }
       break;
     case '1':
     case '2':
@@ -960,6 +988,42 @@ void ClothSimulator::initGUI(Screen *screen) {
     char mass_text[64];
     snprintf(mass_text, sizeof(mass_text), "mass: %.3f kg", body->totalMass());
     new Label(window, mass_text);
+
+    // Solver parameters, built from whatever the solver exposes.
+    vector<Jello::SolverParam> params = body->params();
+    if (!params.empty()) {
+      new Label(window, "Solver parameters", "sans-bold");
+      Widget *panel = new Widget(window);
+      GridLayout *layout = new GridLayout(Orientation::Horizontal, 2, Alignment::Middle, 5, 5);
+      layout->setColAlignment({Alignment::Maximum, Alignment::Fill});
+      layout->setSpacing(0, 10);
+      panel->setLayout(layout);
+      for (const Jello::SolverParam &sp : params) {
+        new Label(panel, sp.name + " :", "sans-bold");
+        if (sp.intValue) {
+          IntBox<int> *box = new IntBox<int>(panel);
+          box->setEditable(true);
+          box->setFixedSize(Vector2i(100, 20));
+          box->setFontSize(14);
+          box->setValue(*sp.intValue);
+          box->setSpinnable(true);
+          box->setMinValue((int)sp.minValue);
+          int *target = sp.intValue;
+          box->setCallback([target](int value) { *target = value; });
+        } else {
+          FloatBox<double> *box = new FloatBox<double>(panel);
+          box->setEditable(true);
+          box->setFixedSize(Vector2i(100, 20));
+          box->setFontSize(14);
+          box->setValue(*sp.value);
+          box->setUnits(sp.units);
+          box->setSpinnable(true);
+          box->setMinValue(sp.minValue);
+          double *target = sp.value;
+          box->setCallback([target](double value) { *target = value; });
+        }
+      }
+    }
     new Label(window, "Keys", "sans-bold");
     new Label(window, "1/2/3: front / 3-4 / top view");
     new Label(window, "C: cutaway   E: edges");

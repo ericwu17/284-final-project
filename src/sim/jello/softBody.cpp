@@ -25,10 +25,4 @@ double SoftBody::totalMass() const {
   return m;
 }
 
-std::unique_ptr<SoftBody> makeSoftBody(const std::string &solver, const TetMesh &mesh,
-                                       double density) {
-  if (solver == "static") return std::make_unique<StaticBody>(mesh, density);
-  return nullptr;
-}
-
 } // namespace Jello

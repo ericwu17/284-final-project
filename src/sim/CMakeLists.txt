@@ -93,6 +93,9 @@ add_library(jello_core STATIC
     jello/tetMesh.cpp
     jello/softBody.cpp
     jello/jelloScene.cpp
+    jello/colliders.cpp
+    jello/metrics.cpp
+    jello/massSpringBody.cpp
 )
 target_include_directories(jello_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(jello_core PUBLIC CGL)

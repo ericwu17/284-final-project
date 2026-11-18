@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "colliders.h"
 #include "tetMesh.h"
 
 namespace Jello {
@@ -13,6 +14,17 @@ namespace Jello {
 struct SimContext {
   Vector3D gravity = Vector3D(0, -9.8, 0);
   double time = 0;  // simulated time at the start of the step (seconds)
+  std::vector<const Collider *> colliders;
+};
+
+// One tunable solver parameter, so the viewer can build its controls without
+// knowing which solver it has. Exactly one of `value` / `intValue` is set.
+struct SolverParam {
+  std::string name;
+  std::string units;
+  double *value = nullptr;
+  int *intValue = nullptr;
+  double minValue = 0;
 };
 
 // A deformable body on a tet mesh. Solvers (mass-spring, XPBD) subclass this.
@@ -28,6 +40,8 @@ class SoftBody {
   virtual void step(double frameDt, const SimContext &ctx) = 0;
   // Back to the rest pose, at rest.
   virtual void reset();
+  // Parameters the viewer may edit live (pointers into the solver).
+  virtual std::vector<SolverParam> params() { return {}; }
 
   const TetMesh &mesh() const { return mesh_; }
   double density() const { return density_; }
@@ -51,11 +65,6 @@ class StaticBody : public SoftBody {
   std::string name() const override { return "static"; }
   void step(double, const SimContext &) override {}
 };
-
-// Creates the solver named in a scene file ("static" for now; "mass_spring"
-// and "xpbd" come in later stages). Returns nullptr for an unknown name.
-std::unique_ptr<SoftBody> makeSoftBody(const std::string &solver, const TetMesh &mesh,
-                                       double density);
 
 } // namespace Jello
 

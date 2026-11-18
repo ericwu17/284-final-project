@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <set>
+#include <sstream>
 
 #include "json.hpp"
 
@@ -37,9 +38,32 @@ double readNumber(const json &obj, const char *key, double fallback) {
   return obj[key].get<double>();
 }
 
+// Sets j["a"]["b"]... = value for the dotted key "a.b...".
+void applyOverride(json &j, const std::string &dotted, const std::string &value) {
+  json parsed;
+  try {
+    parsed = json::parse(value);
+  } catch (const std::exception &) {
+    parsed = value;  // not JSON: treat as a string
+  }
+  json *node = &j;
+  std::stringstream ss(dotted);
+  std::string part;
+  std::vector<std::string> parts;
+  while (std::getline(ss, part, '.')) parts.push_back(part);
+  if (parts.empty()) throw std::runtime_error("empty override key");
+  for (size_t i = 0; i + 1 < parts.size(); i++) {
+    if (!node->is_object() && !node->is_null())
+      throw std::runtime_error("override \"" + dotted + "\": \"" + parts[i] + "\" is not an object");
+    node = &(*node)[parts[i]];
+  }
+  (*node)[parts.back()] = parsed;
+}
+
 } // namespace
 
-bool JelloScene::load(const std::string &path, std::string *error) {
+bool JelloScene::load(const std::string &path, std::string *error,
+                      const std::vector<std::pair<std::string, std::string>> &overrides) {
   std::ifstream in(path);
   if (!in.good()) {
     *error = "cannot open " + path;
@@ -48,7 +72,8 @@ bool JelloScene::load(const std::string &path, std::string *error) {
   try {
     json j;
     in >> j;
-    checkKeys(j, "scene", {"description", "jello", "solver", "ground"});
+    for (const auto &o : overrides) applyOverride(j, o.first, o.second);
+    checkKeys(j, "scene", {"description", "jello", "solver", "mass_spring", "ground"});
 
     if (has(j, "jello")) {
       const json &b = j["jello"];
@@ -67,6 +92,15 @@ bool JelloScene::load(const std::string &path, std::string *error) {
     }
 
     if (has(j, "solver")) solver = j["solver"].get<std::string>();
+
+    if (has(j, "mass_spring")) {
+      const json &m = j["mass_spring"];
+      checkKeys(m, "mass_spring", {"ks", "kd", "substeps"});
+      massSpring.ks = readNumber(m, "ks", massSpring.ks);
+      massSpring.kd = readNumber(m, "kd", massSpring.kd);
+      massSpring.substeps = (int)readNumber(m, "substeps", massSpring.substeps);
+      if (massSpring.substeps < 1) throw std::runtime_error("\"substeps\" must be >= 1");
+    }
 
     if (has(j, "ground")) {
       const json &g = j["ground"];
@@ -93,9 +127,16 @@ TetMesh JelloScene::buildMesh() const {
 }
 
 std::unique_ptr<SoftBody> JelloScene::buildBody(std::string *error) const {
-  auto body = makeSoftBody(solver, buildMesh(), density);
-  if (!body) *error = "unknown solver \"" + solver + "\" (available: static)";
-  return body;
+  if (solver == "static") return std::make_unique<StaticBody>(buildMesh(), density);
+  if (solver == "mass_spring") return std::make_unique<MassSpringBody>(buildMesh(), density, massSpring);
+  *error = "unknown solver \"" + solver + "\" (available: static, mass_spring)";
+  return nullptr;
+}
+
+std::vector<std::unique_ptr<Collider>> JelloScene::buildColliders() const {
+  std::vector<std::unique_ptr<Collider>> out;
+  if (hasGround) out.push_back(std::make_unique<GroundPlane>(groundY, groundFriction));
+  return out;
 }
 
 bool JelloScene::isJelloScene(const std::string &path) {
