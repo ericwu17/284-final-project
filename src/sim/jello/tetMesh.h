@@ -17,6 +17,15 @@ using CGL::Vector3D;
 double tetVolume(const Vector3D &x0, const Vector3D &x1, const Vector3D &x2,
                  const Vector3D &x3);
 
+// Gradients of tetVolume with respect to each vertex:
+//   grad1 = (1/6) (x2 - x0) x (x3 - x0)
+//   grad2 = (1/6) (x3 - x0) x (x1 - x0)
+//   grad3 = (1/6) (x1 - x0) x (x2 - x0)
+//   grad0 = -(grad1 + grad2 + grad3)
+// Each points away from the opposite face, with length (face area) / 3.
+void tetVolumeGradients(const Vector3D &x0, const Vector3D &x1, const Vector3D &x2,
+                        const Vector3D &x3, Vector3D grad[4]);
+
 // Faces that belong to exactly one tet in `tets`, wound counter-clockwise when
 // seen from outside (normal points away from the tet's 4th vertex at `pos`).
 // For a full mesh this is the boundary surface; for a subset of tets (e.g. a

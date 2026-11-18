@@ -13,6 +13,12 @@ struct XPBDParams {
   // the XPBD counterpart of the mass-spring kd.
   double edgeDamping = 0.02;
   int substeps = 100; // substeps per output frame, one constraint pass each
+  // Per-tet volume constraint C = V - V0 with compliance V0 * volumeCompliance.
+  // volumeCompliance = 1/kv (1/Pa) is the same energy as the mass-spring
+  // penalty with stiffness kv; 0 makes every tet incompressible. Off by
+  // default so scenes from before Stage X2 keep their behavior.
+  double volumeCompliance = 1e-5;
+  bool volume = false;
 };
 
 // XPBD soft body (Macklin, Mueller, Chentanez 2016) in the "small steps" form
@@ -25,9 +31,11 @@ struct XPBDParams {
 //     xa += wa dlambda n,  xb -= wb dlambda n,  gamma = alpha beta / h
 //   push penetrating vertices out of colliders
 //   v = (x - p) / h
-// The update is a position projection, so it stays stable for any
+// Then, if enabled, one pass over the tet volume constraints:
+//   C = V - V0,  dlambda = -C / (sum_i w_i |grad_i V|^2 + alpha_t / h^2),
+//   x_i += w_i dlambda grad_i V,  alpha_t = V0 * volumeCompliance.
+// The update is a position projection, so it never diverges for any
 // compliance >= 0 and any h; accuracy (not stability) depends on substeps.
-// Volume constraints are added in Stage X2.
 class XPBDBody : public SoftBody {
  public:
   XPBDBody(const TetMesh &mesh, double density, const XPBDParams &params);
@@ -41,6 +49,7 @@ class XPBDBody : public SoftBody {
  private:
   void substep(double h, double t, const SimContext &ctx);
   void solveEdges(double h);
+  void solveVolumes(double h);
 
   std::vector<double> restLength;  // one per mesh edge
   std::vector<Vector3D> prev;      // positions at the start of the substep

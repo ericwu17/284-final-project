@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -82,6 +83,35 @@ int selftest() {
   printf("every surface normal points out of the box.\n");
   printf("\n%s: %zu of %zu meshes passed\n", failed ? "FAILED" : "OK", cases.size() - failed,
          cases.size());
+
+  // Volume gradients vs central finite differences on random (non-degenerate) tets.
+  std::srand(1234);
+  auto rnd = []() { return 2.0 * std::rand() / RAND_MAX - 1.0; };
+  double worst = 0;
+  const int trials = 1000;
+  for (int t = 0; t < trials; t++) {
+    Vector3D x[4];
+    for (auto &p : x) p = 0.05 * Vector3D(rnd(), rnd(), rnd());
+    Vector3D g[4];
+    tetVolumeGradients(x[0], x[1], x[2], x[3], g);
+    double scale = 0;
+    for (auto &gi : g) scale = std::max(scale, gi.norm());
+    if (scale < 1e-6) continue;  // skip near-degenerate tets
+    const double h = 1e-7;
+    for (int i = 0; i < 4; i++) {
+      for (int a = 0; a < 3; a++) {
+        Vector3D xp[4] = {x[0], x[1], x[2], x[3]}, xm[4] = {x[0], x[1], x[2], x[3]};
+        xp[i][a] += h;
+        xm[i][a] -= h;
+        double fd = (tetVolume(xp[0], xp[1], xp[2], xp[3]) - tetVolume(xm[0], xm[1], xm[2], xm[3])) / (2 * h);
+        worst = std::max(worst, std::abs(fd - g[i][a]) / scale);
+      }
+    }
+  }
+  bool gradOk = worst < 1e-6;
+  printf("Volume gradient vs finite differences, %d random tets: max relative error %.1e  %s\n",
+         trials, worst, gradOk ? "PASS" : "FAIL");
+  if (!gradOk) failed++;
   return failed ? 1 : 0;
 }
 
@@ -165,7 +195,10 @@ int run(int argc, char **argv) {
   }
   auto colliders = scene.buildColliders();
   SimContext ctx;
+  ctx.gravity = scene.gravity;
   for (const auto &c : colliders) ctx.colliders.push_back(c.get());
+  const double restVolume = body->mesh().volume(body->mesh().rest);
+  double maxVolErr = 0;  // max |V - V0| / V0 over output frames, percent
 
   const double fps = 30.0;
   const int frames = (int)std::lround(seconds * fps);
@@ -176,8 +209,8 @@ int run(int argc, char **argv) {
   if (!quiet) {
     printf("%s: solver %s, %zu tets, mass %.3f kg, dt %.3g s\n", scenePath.c_str(),
            body->name().c_str(), body->mesh().tets.size(), body->totalMass(), dt);
-    printf("%8s %10s %10s %10s %10s %10s %9s %9s\n", "t (s)", "com y (m)", "height (m)",
-           "bbox ratio", "com x (mm)", "com z (mm)", "yaw (deg)", "tilt (deg)");
+    printf("%8s %10s %10s %10s %10s %10s %9s %9s %11s\n", "t (s)", "com y (m)", "height (m)",
+           "bbox ratio", "com x (mm)", "com z (mm)", "yaw (deg)", "tilt (deg)", "vol err (%)");
   }
 
   Stability st;
@@ -189,6 +222,8 @@ int run(int argc, char **argv) {
     body->step(1.0 / fps, ctx);
     simMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
     st = checkStability(*body);
+    double volErr = 100.0 * (body->mesh().volume(body->x) - restVolume) / restVolume;
+    if (st.ok) maxVolErr = std::max(maxVolErr, std::abs(volErr));
     if (!quiet && ((frame + 1) % every == 0 || !st.ok)) {
       double lo = INFINITY, hi = -INFINITY;
       for (const Vector3D &p : body->x) { lo = std::min(lo, p.y); hi = std::max(hi, p.y); }
@@ -198,16 +233,17 @@ int run(int argc, char **argv) {
       Vector3D u = body->x[m.vertexId(m.nx, m.ny, m.nz)] - body->x[m.vertexId(0, m.ny, m.nz)];
       double yaw = atan2(-u.z, u.x) * 180 / M_PI, tilt = asin(u.y / u.norm()) * 180 / M_PI;
       Vector3D com = centerOfMass(*body);
-      printf("%8.3f %10.4f %10.4f %10.3f %10.3f %10.3f %9.3f %9.3f\n", (frame + 1) / fps, com.y,
-             hi - lo, st.bboxRatio, com.x * 1000, com.z * 1000, yaw, tilt);
+      printf("%8.3f %10.4f %10.4f %10.3f %10.3f %10.3f %9.3f %9.3f %11.4f\n", (frame + 1) / fps,
+             com.y, hi - lo, st.bboxRatio, com.x * 1000, com.z * 1000, yaw, tilt, volErr);
     }
     if (!st.ok) break;
   }
   int done = std::min(frame + 1, frames);
 
-  printf("RESULT solver=%s stable=%d seconds=%.4f fail_t=%s dt=%.6g ms_per_frame=%.4f reason=\"%s\"\n",
+  printf("RESULT solver=%s stable=%d seconds=%.4f fail_t=%s dt=%.6g ms_per_frame=%.4f "
+         "max_vol_err_pct=%.4f reason=\"%s\"\n",
          body->name().c_str(), st.ok ? 1 : 0, done / fps,
-         st.ok ? "none" : std::to_string((frame + 1) / fps).c_str(), dt, simMs / done,
+         st.ok ? "none" : std::to_string((frame + 1) / fps).c_str(), dt, simMs / done, maxVolErr,
          st.reason.c_str());
   return st.ok ? 0 : 3;
 }

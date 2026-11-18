@@ -1,0 +1,376 @@
+label,t,com_y,height,bbox_ratio,vol_err_pct
+"mass-spring, springs only",0.033,0.1445,0.1,1.0,0.0
+"mass-spring, springs only",0.067,0.1281,0.1,1.0,-0.0
+"mass-spring, springs only",0.1,0.1008,0.1,1.0,0.0
+"mass-spring, springs only",0.133,0.0627,0.1,1.0,-0.0
+"mass-spring, springs only",0.167,0.0412,0.0929,1.073,-5.9008
+"mass-spring, springs only",0.2,0.0734,0.0971,1.066,-3.0648
+"mass-spring, springs only",0.233,0.0962,0.1009,1.065,2.6577
+"mass-spring, springs only",0.267,0.1081,0.1012,1.041,-2.6601
+"mass-spring, springs only",0.3,0.1091,0.0985,1.051,-0.0691
+"mass-spring, springs only",0.333,0.0992,0.1009,1.055,1.2534
+"mass-spring, springs only",0.367,0.0785,0.1005,1.041,-2.5242
+"mass-spring, springs only",0.4,0.047,0.0964,1.038,0.4388
+"mass-spring, springs only",0.433,0.0538,0.1037,1.037,-0.7792
+"mass-spring, springs only",0.467,0.0793,0.1042,1.042,-1.6946
+"mass-spring, springs only",0.5,0.0938,0.1051,1.051,1.5162
+"mass-spring, springs only",0.533,0.0974,0.1017,1.017,-1.5091
+"mass-spring, springs only",0.567,0.0902,0.1024,1.024,0.3036
+"mass-spring, springs only",0.6,0.072,0.102,1.02,-0.0736
+"mass-spring, springs only",0.633,0.0443,0.0934,1.034,-7.2386
+"mass-spring, springs only",0.667,0.0558,0.1112,1.112,-1.299
+"mass-spring, springs only",0.7,0.0711,0.108,1.08,2.0642
+"mass-spring, springs only",0.733,0.0755,0.1063,1.063,-2.8585
+"mass-spring, springs only",0.767,0.0691,0.1084,1.084,1.2635
+"mass-spring, springs only",0.8,0.0518,0.1043,1.043,-0.9018
+"mass-spring, springs only",0.833,0.048,0.0994,1.011,-4.9843
+"mass-spring, springs only",0.867,0.0624,0.1027,1.044,5.103
+"mass-spring, springs only",0.9,0.0662,0.1017,1.017,-4.516
+"mass-spring, springs only",0.933,0.059,0.1005,1.036,1.2585
+"mass-spring, springs only",0.967,0.0449,0.0945,1.05,-4.3294
+"mass-spring, springs only",1.0,0.0566,0.1017,1.017,-2.2585
+"mass-spring, springs only",1.033,0.0638,0.1043,1.043,2.1113
+"mass-spring, springs only",1.067,0.0601,0.1011,1.011,-0.9567
+"mass-spring, springs only",1.1,0.0472,0.0969,1.014,-4.0565
+"mass-spring, springs only",1.133,0.0524,0.1044,1.044,4.4501
+"mass-spring, springs only",1.167,0.0571,0.1019,1.019,-2.9845
+"mass-spring, springs only",1.2,0.0509,0.1033,1.033,0.8241
+"mass-spring, springs only",1.233,0.0487,0.0993,1.016,-1.5138
+"mass-spring, springs only",1.267,0.0541,0.1021,1.029,-0.1265
+"mass-spring, springs only",1.3,0.0491,0.0994,1.02,0.3671
+"mass-spring, springs only",1.333,0.0501,0.1015,1.015,-1.3506
+"mass-spring, springs only",1.367,0.0512,0.1023,1.023,-0.4704
+"mass-spring, springs only",1.4,0.0477,0.097,1.022,-2.7852
+"mass-spring, springs only",1.433,0.0521,0.1006,1.012,-0.0979
+"mass-spring, springs only",1.467,0.0484,0.0978,1.015,-1.5911
+"mass-spring, springs only",1.5,0.0506,0.1014,1.02,1.0223
+"mass-spring, springs only",1.533,0.0486,0.0996,1.009,-2.3847
+"mass-spring, springs only",1.567,0.0501,0.1014,1.017,0.0159
+"mass-spring, springs only",1.6,0.0487,0.0993,1.008,-1.8863
+"mass-spring, springs only",1.633,0.0499,0.1003,1.012,0.0662
+"mass-spring, springs only",1.667,0.0488,0.0987,1.01,-0.8722
+"mass-spring, springs only",1.7,0.0498,0.0999,1.005,-0.4561
+"mass-spring, springs only",1.733,0.0489,0.0991,1.009,-1.2928
+"mass-spring, springs only",1.767,0.0496,0.1001,1.008,-0.1407
+"mass-spring, springs only",1.8,0.0493,0.1003,1.009,-0.5109
+"mass-spring, springs only",1.833,0.0492,0.0998,1.012,-0.315
+"mass-spring, springs only",1.867,0.0497,0.1004,1.005,-0.3019
+"mass-spring, springs only",1.9,0.0488,0.0988,1.009,-1.2593
+"mass-spring, springs only",1.933,0.0498,0.1,1.002,-0.1282
+"mass-spring, springs only",1.967,0.0489,0.0983,1.006,-1.0349
+"mass-spring, springs only",2.0,0.0496,0.1001,1.005,-0.4512
+"mass-spring, springs only",2.033,0.0491,0.0994,1.006,-0.8924
+"mass-spring, springs only",2.067,0.0492,0.0995,1.004,-1.0092
+"mass-spring, springs only",2.1,0.0495,0.0998,1.004,-0.4803
+"mass-spring, springs only",2.133,0.049,0.0986,1.006,-0.8836
+"mass-spring, springs only",2.167,0.0498,0.0997,1.001,-0.3098
+"mass-spring, springs only",2.2,0.0489,0.0989,1.008,-0.9858
+"mass-spring, springs only",2.233,0.0497,0.1001,1.003,-0.2963
+"mass-spring, springs only",2.267,0.0491,0.0994,1.007,-0.7215
+"mass-spring, springs only",2.3,0.0494,0.0998,1.005,-0.3641
+"mass-spring, springs only",2.333,0.0494,0.0996,1.005,-0.5492
+"mass-spring, springs only",2.367,0.0491,0.099,1.006,-0.8868
+"mass-spring, springs only",2.4,0.0497,0.0996,1.002,-0.3351
+"mass-spring, springs only",2.433,0.0489,0.0985,1.006,-1.047
+"mass-spring, springs only",2.467,0.0497,0.0999,1.004,-0.2974
+"mass-spring, springs only",2.5,0.049,0.0987,1.005,-1.0371
+"mass-spring + volume, kv 1e5 Pa",0.033,0.1445,0.1,1.0,0.0
+"mass-spring + volume, kv 1e5 Pa",0.067,0.1281,0.1,1.0,0.0
+"mass-spring + volume, kv 1e5 Pa",0.1,0.1009,0.1,1.0,0.0
+"mass-spring + volume, kv 1e5 Pa",0.133,0.0627,0.1,1.0,0.0
+"mass-spring + volume, kv 1e5 Pa",0.167,0.0458,0.0977,1.086,-0.7408
+"mass-spring + volume, kv 1e5 Pa",0.2,0.0734,0.1005,1.046,-0.3095
+"mass-spring + volume, kv 1e5 Pa",0.233,0.0907,0.1012,1.04,-0.1923
+"mass-spring + volume, kv 1e5 Pa",0.267,0.0971,0.0986,1.043,-0.2429
+"mass-spring + volume, kv 1e5 Pa",0.3,0.0926,0.1002,1.054,-0.3656
+"mass-spring + volume, kv 1e5 Pa",0.333,0.0772,0.1,1.043,-0.1946
+"mass-spring + volume, kv 1e5 Pa",0.367,0.051,0.0997,1.04,0.092
+"mass-spring + volume, kv 1e5 Pa",0.4,0.0519,0.1068,1.068,0.8358
+"mass-spring + volume, kv 1e5 Pa",0.433,0.0594,0.1049,1.049,0.4179
+"mass-spring + volume, kv 1e5 Pa",0.467,0.056,0.1064,1.064,0.0091
+"mass-spring + volume, kv 1e5 Pa",0.5,0.0454,0.0958,1.086,-0.6567
+"mass-spring + volume, kv 1e5 Pa",0.533,0.0581,0.1031,1.031,0.4846
+"mass-spring + volume, kv 1e5 Pa",0.567,0.0616,0.1006,1.015,-0.2031
+"mass-spring + volume, kv 1e5 Pa",0.6,0.0543,0.1009,1.011,-0.1021
+"mass-spring + volume, kv 1e5 Pa",0.633,0.0485,0.1012,1.043,0.458
+"mass-spring + volume, kv 1e5 Pa",0.667,0.0533,0.1006,1.044,-0.0559
+"mass-spring + volume, kv 1e5 Pa",0.7,0.0487,0.1007,1.035,-0.0798
+"mass-spring + volume, kv 1e5 Pa",0.733,0.0517,0.1023,1.023,0.4953
+"mass-spring + volume, kv 1e5 Pa",0.767,0.0499,0.1002,1.009,-0.3151
+"mass-spring + volume, kv 1e5 Pa",0.8,0.0496,0.0998,1.012,0.0042
+"mass-spring + volume, kv 1e5 Pa",0.833,0.0491,0.099,1.021,-0.1181
+"mass-spring + volume, kv 1e5 Pa",0.867,0.0499,0.1006,1.006,-0.0893
+"mass-spring + volume, kv 1e5 Pa",0.9,0.0489,0.0993,1.016,-0.2008
+"mass-spring + volume, kv 1e5 Pa",0.933,0.0499,0.1001,1.011,-0.0551
+"mass-spring + volume, kv 1e5 Pa",0.967,0.0493,0.0997,1.009,-0.1579
+"mass-spring + volume, kv 1e5 Pa",1.0,0.0492,0.0993,1.011,-0.1106
+"mass-spring + volume, kv 1e5 Pa",1.033,0.0499,0.1,1.007,-0.0796
+"mass-spring + volume, kv 1e5 Pa",1.067,0.049,0.0987,1.012,-0.2363
+"mass-spring + volume, kv 1e5 Pa",1.1,0.0498,0.0998,1.005,-0.0429
+"mass-spring + volume, kv 1e5 Pa",1.133,0.0494,0.0993,1.01,-0.1638
+"mass-spring + volume, kv 1e5 Pa",1.167,0.0492,0.0994,1.009,-0.1451
+"mass-spring + volume, kv 1e5 Pa",1.2,0.0499,0.0999,1.004,-0.0242
+"mass-spring + volume, kv 1e5 Pa",1.233,0.049,0.0986,1.012,-0.2532
+"mass-spring + volume, kv 1e5 Pa",1.267,0.0497,0.0998,1.003,-0.0882
+"mass-spring + volume, kv 1e5 Pa",1.3,0.0494,0.0994,1.006,-0.1175
+"mass-spring + volume, kv 1e5 Pa",1.333,0.0492,0.0992,1.01,-0.1994
+"mass-spring + volume, kv 1e5 Pa",1.367,0.0498,0.0999,1.004,-0.0547
+"mass-spring + volume, kv 1e5 Pa",1.4,0.049,0.0991,1.011,-0.1893
+"mass-spring + volume, kv 1e5 Pa",1.433,0.0497,0.0996,1.004,-0.0994
+"mass-spring + volume, kv 1e5 Pa",1.467,0.0494,0.0992,1.007,-0.1437
+"mass-spring + volume, kv 1e5 Pa",1.5,0.0492,0.0991,1.009,-0.1784
+"mass-spring + volume, kv 1e5 Pa",1.533,0.0498,0.0998,1.003,-0.0679
+"mass-spring + volume, kv 1e5 Pa",1.567,0.0491,0.0991,1.011,-0.2022
+"mass-spring + volume, kv 1e5 Pa",1.6,0.0497,0.0997,1.005,-0.0882
+"mass-spring + volume, kv 1e5 Pa",1.633,0.0495,0.0993,1.007,-0.1372
+"mass-spring + volume, kv 1e5 Pa",1.667,0.0492,0.099,1.009,-0.1888
+"mass-spring + volume, kv 1e5 Pa",1.7,0.0498,0.0998,1.002,-0.0609
+"mass-spring + volume, kv 1e5 Pa",1.733,0.0491,0.099,1.011,-0.2048
+"mass-spring + volume, kv 1e5 Pa",1.767,0.0496,0.0997,1.005,-0.1045
+"mass-spring + volume, kv 1e5 Pa",1.8,0.0495,0.0995,1.006,-0.1144
+"mass-spring + volume, kv 1e5 Pa",1.833,0.0492,0.099,1.009,-0.1893
+"mass-spring + volume, kv 1e5 Pa",1.867,0.0498,0.0998,1.003,-0.0776
+"mass-spring + volume, kv 1e5 Pa",1.9,0.0491,0.099,1.01,-0.1904
+"mass-spring + volume, kv 1e5 Pa",1.933,0.0496,0.0995,1.005,-0.1111
+"mass-spring + volume, kv 1e5 Pa",1.967,0.0495,0.0995,1.006,-0.1191
+"mass-spring + volume, kv 1e5 Pa",2.0,0.0492,0.0991,1.01,-0.1829
+"mass-spring + volume, kv 1e5 Pa",2.033,0.0498,0.0997,1.003,-0.0757
+"mass-spring + volume, kv 1e5 Pa",2.067,0.0492,0.099,1.009,-0.1872
+"mass-spring + volume, kv 1e5 Pa",2.1,0.0495,0.0994,1.005,-0.1188
+"mass-spring + volume, kv 1e5 Pa",2.133,0.0495,0.0995,1.006,-0.1182
+"mass-spring + volume, kv 1e5 Pa",2.167,0.0492,0.0991,1.009,-0.182
+"mass-spring + volume, kv 1e5 Pa",2.2,0.0498,0.0997,1.003,-0.0756
+"mass-spring + volume, kv 1e5 Pa",2.233,0.0492,0.0991,1.009,-0.1822
+"mass-spring + volume, kv 1e5 Pa",2.267,0.0495,0.0994,1.006,-0.1248
+"mass-spring + volume, kv 1e5 Pa",2.3,0.0496,0.0994,1.005,-0.1125
+"mass-spring + volume, kv 1e5 Pa",2.333,0.0492,0.0991,1.009,-0.1845
+"mass-spring + volume, kv 1e5 Pa",2.367,0.0497,0.0997,1.004,-0.0833
+"mass-spring + volume, kv 1e5 Pa",2.4,0.0492,0.0992,1.009,-0.1715
+"mass-spring + volume, kv 1e5 Pa",2.433,0.0495,0.0994,1.006,-0.1271
+"mass-spring + volume, kv 1e5 Pa",2.467,0.0496,0.0995,1.005,-0.1135
+"mass-spring + volume, kv 1e5 Pa",2.5,0.0492,0.0991,1.009,-0.1834
+"XPBD, edges only",0.033,0.1445,0.1,1.0,0.0
+"XPBD, edges only",0.067,0.1281,0.1,1.0,0.0
+"XPBD, edges only",0.1,0.1008,0.1,1.0,0.0
+"XPBD, edges only",0.133,0.0627,0.1,1.0,0.0
+"XPBD, edges only",0.167,0.0409,0.0919,1.07,-6.7836
+"XPBD, edges only",0.2,0.0713,0.0983,1.044,-1.8573
+"XPBD, edges only",0.233,0.0922,0.1008,1.035,1.1449
+"XPBD, edges only",0.267,0.1023,0.1008,1.023,-0.5853
+"XPBD, edges only",0.3,0.1016,0.0999,1.016,-0.2179
+"XPBD, edges only",0.333,0.0899,0.1003,1.012,0.2697
+"XPBD, edges only",0.367,0.0673,0.1003,1.007,-0.2535
+"XPBD, edges only",0.4,0.0422,0.0894,1.056,-7.7111
+"XPBD, edges only",0.433,0.059,0.102,1.02,0.0327
+"XPBD, edges only",0.467,0.0722,0.1033,1.033,-1.3421
+"XPBD, edges only",0.5,0.0744,0.1033,1.033,0.903
+"XPBD, edges only",0.533,0.0658,0.103,1.03,-0.3446
+"XPBD, edges only",0.567,0.0473,0.0981,1.018,-3.5729
+"XPBD, edges only",0.6,0.0518,0.105,1.05,1.3909
+"XPBD, edges only",0.633,0.0611,0.1038,1.038,0.1531
+"XPBD, edges only",0.667,0.0596,0.1035,1.035,-0.7936
+"XPBD, edges only",0.7,0.0478,0.0993,1.044,-2.2948
+"XPBD, edges only",0.733,0.051,0.1036,1.036,-0.298
+"XPBD, edges only",0.767,0.0538,0.1082,1.082,0.5868
+"XPBD, edges only",0.8,0.0483,0.1018,1.083,-2.5942
+"XPBD, edges only",0.833,0.0504,0.1034,1.086,-0.6525
+"XPBD, edges only",0.867,0.0515,0.1061,1.09,-0.217
+"XPBD, edges only",0.9,0.0484,0.0983,1.032,-1.9753
+"XPBD, edges only",0.933,0.0505,0.1022,1.046,0.0409
+"XPBD, edges only",0.967,0.049,0.1004,1.044,-1.21
+"XPBD, edges only",1.0,0.0498,0.1001,1.013,-0.2451
+"XPBD, edges only",1.033,0.0493,0.1017,1.05,-0.6821
+"XPBD, edges only",1.067,0.0494,0.1008,1.041,-0.749
+"XPBD, edges only",1.1,0.0495,0.1007,1.019,-0.4981
+"XPBD, edges only",1.133,0.0491,0.1002,1.044,-0.9566
+"XPBD, edges only",1.167,0.0493,0.1003,1.033,-0.6496
+"XPBD, edges only",1.2,0.0493,0.0993,1.01,-0.6177
+"XPBD, edges only",1.233,0.0492,0.1004,1.033,-0.7395
+"XPBD, edges only",1.267,0.0494,0.1007,1.035,-0.6213
+"XPBD, edges only",1.3,0.0492,0.0991,1.017,-0.839
+"XPBD, edges only",1.333,0.0494,0.1,1.023,-0.5611
+"XPBD, edges only",1.367,0.0491,0.1001,1.035,-0.8205
+"XPBD, edges only",1.4,0.0494,0.1002,1.026,-0.5283
+"XPBD, edges only",1.433,0.0491,0.099,1.012,-0.8102
+"XPBD, edges only",1.467,0.0494,0.1003,1.028,-0.5905
+"XPBD, edges only",1.5,0.0492,0.1001,1.031,-0.7578
+"XPBD, edges only",1.533,0.0493,0.0996,1.019,-0.6299
+"XPBD, edges only",1.567,0.0493,0.0996,1.019,-0.6887
+"XPBD, edges only",1.6,0.0493,0.1001,1.03,-0.688
+"XPBD, edges only",1.633,0.0493,0.1,1.027,-0.6407
+"XPBD, edges only",1.667,0.0492,0.0992,1.014,-0.7323
+"XPBD, edges only",1.7,0.0493,0.0999,1.023,-0.6177
+"XPBD, edges only",1.733,0.0492,0.0999,1.03,-0.7386
+"XPBD, edges only",1.767,0.0493,0.0997,1.023,-0.6182
+"XPBD, edges only",1.8,0.0492,0.0992,1.015,-0.7272
+"XPBD, edges only",1.833,0.0493,0.0999,1.026,-0.6415
+"XPBD, edges only",1.867,0.0493,0.0998,1.028,-0.6972
+"XPBD, edges only",1.9,0.0493,0.0994,1.019,-0.6719
+"XPBD, edges only",1.933,0.0493,0.0995,1.02,-0.6703
+"XPBD, edges only",1.967,0.0493,0.0998,1.028,-0.6941
+"XPBD, edges only",2.0,0.0493,0.0997,1.025,-0.65
+"XPBD, edges only",2.033,0.0492,0.0992,1.017,-0.7075
+"XPBD, edges only",2.067,0.0493,0.0997,1.024,-0.6459
+"XPBD, edges only",2.1,0.0492,0.0997,1.028,-0.7039
+"XPBD, edges only",2.133,0.0493,0.0995,1.022,-0.653
+"XPBD, edges only",2.167,0.0493,0.0993,1.018,-0.6933
+"XPBD, edges only",2.2,0.0493,0.0997,1.026,-0.6666
+"XPBD, edges only",2.233,0.0493,0.0996,1.026,-0.6772
+"XPBD, edges only",2.267,0.0493,0.0993,1.02,-0.681
+"XPBD, edges only",2.3,0.0493,0.0994,1.022,-0.6665
+"XPBD, edges only",2.333,0.0493,0.0996,1.027,-0.6886
+"XPBD, edges only",2.367,0.0493,0.0995,1.025,-0.6606
+"XPBD, edges only",2.4,0.0493,0.0991,1.02,-0.6911
+"XPBD, edges only",2.433,0.0493,0.0995,1.025,-0.6621
+"XPBD, edges only",2.467,0.0493,0.0995,1.027,-0.6862
+"XPBD, edges only",2.5,0.0493,0.0993,1.023,-0.668
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",0.033,0.1445,0.1,1.0,0.0
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",0.067,0.1281,0.1,1.0,0.0
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",0.1,0.1008,0.1,1.0,0.0
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",0.133,0.0627,0.1,1.0,0.0
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",0.167,0.0452,0.0966,1.073,-0.8946
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",0.2,0.0711,0.1004,1.044,-0.0661
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",0.233,0.0866,0.1003,1.037,-0.0034
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",0.267,0.0911,0.0999,1.031,-0.0203
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",0.3,0.0848,0.1004,1.026,-0.0223
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",0.333,0.0676,0.1002,1.02,-0.005
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",0.367,0.0439,0.0928,1.076,-1.1759
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",0.4,0.0582,0.1025,1.025,0.0007
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",0.433,0.0702,0.1031,1.031,-0.0188
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",0.467,0.0713,0.1024,1.024,0.0012
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",0.5,0.0614,0.1026,1.026,-0.006
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",0.533,0.0459,0.0954,1.054,-0.658
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",0.567,0.0542,0.1016,1.016,-0.0134
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",0.6,0.0561,0.1025,1.025,-0.0198
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",0.633,0.0485,0.0997,1.035,-0.0903
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",0.667,0.0512,0.1032,1.032,-0.01
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",0.7,0.0523,0.1054,1.054,-0.0122
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",0.733,0.0481,0.0984,1.029,-0.4434
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",0.767,0.0514,0.1063,1.064,-0.0556
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",0.8,0.0493,0.1003,1.034,-0.1656
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",0.833,0.0501,0.1031,1.055,-0.1164
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",0.867,0.05,0.1004,1.012,-0.0833
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",0.9,0.0493,0.1003,1.022,-0.1594
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",0.933,0.0494,0.1004,1.017,-0.2584
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",0.967,0.0498,0.1,1.012,-0.0794
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.0,0.0489,0.0992,1.017,-0.264
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.033,0.05,0.1004,1.019,-0.051
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.067,0.0489,0.0993,1.019,-0.241
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.1,0.0497,0.0999,1.009,-0.1033
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.133,0.0494,0.0997,1.011,-0.1565
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.167,0.0492,0.0997,1.017,-0.1974
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.2,0.0497,0.1001,1.017,-0.0886
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.233,0.0491,0.0992,1.016,-0.2258
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.267,0.0497,0.0996,1.01,-0.1026
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.3,0.0493,0.0996,1.015,-0.1798
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.333,0.0494,0.0998,1.018,-0.161
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.367,0.0496,0.0998,1.015,-0.1237
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.4,0.0492,0.0992,1.016,-0.1987
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.433,0.0496,0.0997,1.013,-0.1129
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.467,0.0493,0.0996,1.018,-0.1847
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.5,0.0495,0.0997,1.017,-0.144
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.533,0.0494,0.0995,1.014,-0.1467
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.567,0.0493,0.0993,1.016,-0.1769
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.6,0.0495,0.0998,1.016,-0.1271
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.633,0.0493,0.0995,1.018,-0.1801
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.667,0.0495,0.0996,1.016,-0.1387
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.7,0.0494,0.0993,1.016,-0.1587
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.733,0.0494,0.0995,1.016,-0.1622
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.767,0.0495,0.0997,1.018,-0.1397
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.8,0.0493,0.0995,1.018,-0.1723
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.833,0.0495,0.0995,1.016,-0.14
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.867,0.0494,0.0994,1.017,-0.1631
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.9,0.0494,0.0995,1.018,-0.154
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.933,0.0494,0.0996,1.018,-0.1487
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",1.967,0.0494,0.0994,1.018,-0.1648
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",2.0,0.0495,0.0994,1.018,-0.1439
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",2.033,0.0494,0.0994,1.019,-0.1632
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",2.067,0.0494,0.0995,1.019,-0.1505
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",2.1,0.0494,0.0995,1.019,-0.1541
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",2.133,0.0494,0.0993,1.019,-0.1592
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",2.167,0.0494,0.0994,1.019,-0.1481
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",2.2,0.0494,0.0994,1.02,-0.1613
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",2.233,0.0494,0.0995,1.02,-0.1499
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",2.267,0.0494,0.0994,1.02,-0.1566
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",2.3,0.0494,0.0993,1.021,-0.1557
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",2.333,0.0494,0.0995,1.021,-0.1514
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",2.367,0.0494,0.0994,1.021,-0.159
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",2.4,0.0494,0.0994,1.021,-0.1507
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",2.433,0.0494,0.0993,1.022,-0.1573
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",2.467,0.0494,0.0994,1.022,-0.1539
+"XPBD + volume, 1e-5 1/Pa (= kv 1e5), 100 substeps",2.5,0.0494,0.0994,1.022,-0.1537
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",0.033,0.1444,0.1,1.0,0.0
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",0.067,0.128,0.1,1.0,0.0
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",0.1,0.1007,0.1,1.0,0.0
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",0.133,0.0625,0.1,1.0,0.0
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",0.167,0.0443,0.0956,1.076,-0.8993
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",0.2,0.0692,0.1007,1.044,-0.0242
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",0.233,0.0835,0.1015,1.029,-0.0128
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",0.267,0.087,0.1017,1.018,-0.0077
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",0.3,0.0796,0.1022,1.022,-0.0039
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",0.333,0.0613,0.1028,1.028,-0.0018
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",0.367,0.0445,0.0953,1.067,-0.7554
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",0.4,0.0579,0.1025,1.025,-0.0089
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",0.433,0.0623,0.1065,1.065,-0.0067
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",0.467,0.0559,0.1107,1.107,-0.0013
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",0.5,0.0469,0.0987,1.056,-0.4243
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",0.533,0.0531,0.1096,1.096,-0.0205
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",0.567,0.0526,0.1112,1.124,-0.0677
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",0.6,0.0491,0.1,1.032,-0.1483
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",0.633,0.0502,0.1061,1.098,-0.1332
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",0.667,0.0511,0.1021,1.021,-0.0003
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",0.7,0.0484,0.1004,1.046,-0.2327
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",0.733,0.0503,0.1036,1.036,-0.0472
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",0.767,0.0491,0.0996,1.028,-0.1492
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",0.8,0.0497,0.1035,1.047,-0.1127
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",0.833,0.0493,0.1003,1.017,-0.119
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",0.867,0.0495,0.1014,1.022,-0.0884
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",0.9,0.0491,0.1014,1.037,-0.1456
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",0.933,0.0496,0.1003,1.022,-0.0865
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",0.967,0.0492,0.0999,1.015,-0.1356
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.0,0.0495,0.1011,1.027,-0.1038
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.033,0.0493,0.1003,1.024,-0.1242
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.067,0.0494,0.0995,1.009,-0.1053
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.1,0.0493,0.1004,1.02,-0.1207
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.133,0.0493,0.1006,1.022,-0.1136
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.167,0.0493,0.0998,1.015,-0.1122
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.2,0.0493,0.0995,1.01,-0.1189
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.233,0.0494,0.1003,1.018,-0.1092
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.267,0.0493,0.1001,1.018,-0.1199
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.3,0.0494,0.0995,1.009,-0.1101
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.333,0.0493,0.0997,1.012,-0.1179
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.367,0.0494,0.1001,1.016,-0.1124
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.4,0.0493,0.0998,1.013,-0.1157
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.433,0.0493,0.0993,1.009,-0.114
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.467,0.0493,0.0997,1.011,-0.1145
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.5,0.0493,0.0999,1.013,-0.1152
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.533,0.0493,0.0996,1.01,-0.113
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.567,0.0493,0.0993,1.009,-0.1163
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.6,0.0493,0.0997,1.011,-0.1127
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.633,0.0493,0.0997,1.011,-0.1157
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.667,0.0493,0.0994,1.008,-0.1137
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.7,0.0493,0.0994,1.008,-0.1146
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.733,0.0493,0.0997,1.01,-0.1146
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.767,0.0493,0.0996,1.009,-0.1141
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.8,0.0493,0.0993,1.008,-0.1146
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.833,0.0493,0.0995,1.009,-0.1142
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.867,0.0493,0.0996,1.009,-0.1146
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.9,0.0493,0.0994,1.009,-0.114
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.933,0.0493,0.0993,1.008,-0.1148
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",1.967,0.0493,0.0995,1.009,-0.114
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",2.0,0.0493,0.0995,1.009,-0.1146
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",2.033,0.0493,0.0993,1.009,-0.1144
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",2.067,0.0493,0.0993,1.009,-0.1142
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",2.1,0.0493,0.0994,1.009,-0.1146
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",2.133,0.0493,0.0994,1.009,-0.1142
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",2.167,0.0493,0.0993,1.01,-0.1144
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",2.2,0.0493,0.0993,1.01,-0.1144
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",2.233,0.0493,0.0994,1.01,-0.1144
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",2.267,0.0493,0.0993,1.01,-0.1143
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",2.3,0.0493,0.0992,1.01,-0.1145
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",2.333,0.0493,0.0993,1.01,-0.1143
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",2.367,0.0493,0.0994,1.011,-0.1144
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",2.4,0.0493,0.0993,1.011,-0.1144
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",2.433,0.0493,0.0993,1.011,-0.1142
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",2.467,0.0493,0.0993,1.011,-0.1145
+"XPBD + volume, 1e-6 1/Pa, 50 substeps",2.5,0.0493,0.0993,1.012,-0.1143

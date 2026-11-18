@@ -20,8 +20,10 @@ namespace Jello {
 //     "jello":  { "size": [0.1, 0.1, 0.1], "cells": [8, 8, 8],
 //                 "origin": [-0.05, 0.1, -0.05], "density": 1050 },
 //     "solver": "mass_spring",
-//     "mass_spring": { "ks": 300, "kd": 0.02, "substeps": 100 },
-//     "xpbd":   { "edge_compliance": 0.00333, "edge_damping": 0.02, "substeps": 100 },
+//     "mass_spring": { "ks": 300, "kd": 0.02, "substeps": 100, "kv": 1e5, "volume": true },
+//     "xpbd":   { "edge_compliance": 0.00333, "edge_damping": 0.02, "substeps": 100,
+//                 "volume_compliance": 1e-5, "volume": true },
+//     "gravity": [0, -9.8, 0],
 //     "ground": { "y": 0.0, "friction": 0.5 }
 //   }
 // Units are SI (meters, kg/m^3), Y is up. Every field is optional and
@@ -35,6 +37,8 @@ struct JelloScene {
   std::string solver = "static";  // "static", "mass_spring", or "xpbd"
   MassSpringParams massSpring;
   XPBDParams xpbd;
+
+  Vector3D gravity = Vector3D(0, -9.8, 0);
 
   bool hasGround = true;
   double groundY = 0.0;

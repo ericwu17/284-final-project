@@ -12,10 +12,12 @@ MassSpringBody::MassSpringBody(const TetMesh &mesh, double density, const MassSp
 }
 
 std::vector<SolverParam> MassSpringBody::params() {
-  std::vector<SolverParam> out(3);
+  std::vector<SolverParam> out(5);
   out[0].name = "ks";       out[0].units = "N/m";   out[0].value = &p.ks;
   out[1].name = "kd";       out[1].units = "N s/m"; out[1].value = &p.kd;
   out[2].name = "substeps"; out[2].intValue = &p.substeps; out[2].minValue = 1;
+  out[3].name = "volume";   out[3].boolValue = &p.volume;
+  out[4].name = "kv";       out[4].units = "Pa";    out[4].value = &p.kv;
   return out;
 }
 
@@ -43,6 +45,21 @@ void MassSpringBody::substep(double h, double t, const SimContext &ctx) {
     Vector3D f = magnitude * dir;
     force[a] += f;
     force[b] -= f;
+  }
+
+  // Volume penalty: E = 1/2 kv (V - V0)^2 / V0 per tet, so
+  // f_i = -dE/dx_i = -kv (V - V0) / V0 * dV/dx_i. Pushes a squashed tet's
+  // vertices outward along the gradients (and pulls a stretched one in).
+  if (p.volume && p.kv > 0) {
+    for (size_t t = 0; t < mesh_.tets.size(); t++) {
+      const auto &tet = mesh_.tets[t];
+      Vector3D grad[4];
+      tetVolumeGradients(x[tet[0]], x[tet[1]], x[tet[2]], x[tet[3]], grad);
+      double V = tetVolume(x[tet[0]], x[tet[1]], x[tet[2]], x[tet[3]]);
+      double V0 = mesh_.restVolumes[t];
+      double s = -p.kv * (V - V0) / V0;
+      for (int k = 0; k < 4; k++) force[tet[k]] += s * grad[k];
+    }
   }
 
   // Semi-implicit Euler: new velocity first, then position from it.

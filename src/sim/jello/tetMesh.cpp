@@ -13,6 +13,15 @@ double tetVolume(const Vector3D &x0, const Vector3D &x1, const Vector3D &x2,
   return dot(x1 - x0, cross(x2 - x0, x3 - x0)) / 6.0;
 }
 
+void tetVolumeGradients(const Vector3D &x0, const Vector3D &x1, const Vector3D &x2,
+                        const Vector3D &x3, Vector3D grad[4]) {
+  const Vector3D e1 = x1 - x0, e2 = x2 - x0, e3 = x3 - x0;
+  grad[1] = cross(e2, e3) / 6.0;
+  grad[2] = cross(e3, e1) / 6.0;
+  grad[3] = cross(e1, e2) / 6.0;
+  grad[0] = -(grad[1] + grad[2] + grad[3]);
+}
+
 namespace {
 
 // Cell corners are numbered c = dx + 2*dy + 4*dz, with dx, dy, dz in {0, 1}.

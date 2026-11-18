@@ -33,6 +33,8 @@ public:
   // Jello mode: pause when the stability check fails (default on). Off lets
   // you watch (and record) a blow-up.
   void setPauseOnInstability(bool on) { pause_on_instability = on; }
+  // Gravity for the simulation (and the GUI boxes). Call before init().
+  void setGravity(const CGL::Vector3D &g) { gravity = g; }
   virtual bool isAlive();
   virtual void drawContents();
 
@@ -194,6 +196,7 @@ private:
   bool screenshot_exit = false;
   int screenshot_delay_frames = 0; // let the first frames settle before saving
   bool recording = false;
+  bool record_hold_step = false;  // skip one sim step so frame 0 is the start state
   bool record_exit_when_done = false;
   std::string record_dir;
   int record_frame_idx = 0;

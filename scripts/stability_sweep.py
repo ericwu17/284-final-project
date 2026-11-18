@@ -147,7 +147,12 @@ def main():
     ax.set_xlabel("stiffness k (N/m)" if stiffness_axis else name)
     ax.set_ylabel("largest stable time step (ms)")
     ax.grid(True, which="both", alpha=0.25)
-    ax.legend(fontsize=8)
+    if len(series) > 2:
+        # Many series: legend under the axes so it cannot hide data.
+        fig.set_size_inches(5, 3.6 + 0.22 * (len(series) + 1))
+        ax.legend(fontsize=7.5, loc="upper center", bbox_to_anchor=(0.5, -0.18), frameon=False)
+    else:
+        ax.legend(fontsize=8)
     fig.tight_layout()
     for ext in ("png", "pdf"):
         fig.savefig(f"{args.out_prefix}.{ext}", dpi=200)

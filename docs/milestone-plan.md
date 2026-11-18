@@ -207,19 +207,31 @@ Each stage lists: **Build** (what to write), **Verify** (how you know it's right
 
 ### Stage M2 / X2: Volume terms (Day 3)
 
-Both use the same geometric quantities (put them in `tetMesh` helpers):
+Both use the same geometric quantities (`tetVolume`, `tetVolumeGradients` in `tetMesh`):
 `V = (1/6)(x1−x0)·((x2−x0)×(x3−x0))`, with gradients
 `∇₁V = (1/6)(x2−x0)×(x3−x0)`, `∇₂V = (1/6)(x3−x0)×(x1−x0)`, `∇₃V = (1/6)(x1−x0)×(x2−x0)`, `∇₀V = −(∇₁V + ∇₂V + ∇₃V)`.
-Unit test: compare these gradients against finite differences on random tets (`--selftest`).
+`jellosim --selftest` checks them against finite differences on 1,000 random tets (max relative error 1.4e-10).
 
-- **M2 build:** per-tet penalty energy `E = ½ kv (V − V0)² / V0`, so `f_i = −kv ((V − V0)/V0) ∇ᵢV`. Add a toggle (`"volume": false`) for the ablation.
-- **X2 build:** per-tet constraint `C = V − V0`, `Δλ = −C / (Σ wᵢ|∇ᵢV|² + α̃_v)`, `xᵢ += wᵢ Δλ ∇ᵢV`. Solve it in the same loop as the distance constraints. Add a toggle for the distance-only ablation.
-- **Verify:** volume error (computed by Q1) drops sharply with the term on. Flattening the block by hand (for example, starting it squashed) should make it bulge sideways rather than lose volume. Increasing kv in mass-spring forces a smaller dt, which is our first data point for the stiffness and dt tradeoff.
+- **M2 build:** per-tet penalty energy `E = ½ kv (V − V0)² / V0`, so `f_i = −kv ((V − V0)/V0) ∇ᵢV`; kv in Pa (bulk-modulus-like). `"volume": true/false` for the ablation.
+- **X2 build:** per-tet constraint `C = V − V0`, `Δλ = −C / (Σ wᵢ|∇ᵢV|² + α_t/h²)`, `xᵢ += wᵢ Δλ ∇ᵢV`, with `α_t = V0 · volume_compliance`. `volume_compliance = 1/kv` is the same energy as the penalty, so the solvers can be matched. Solved right after the edge pass, same sweep direction.
+- **Defaults are off** (`"volume": false`) so the M1/X1 scenes keep their behavior; `drop_ms_volume.json` (kv = 1e5 Pa, 150 substeps) and `drop_xpbd_volume.json` (compliance 1e-6, 50 substeps) turn them on. A `"gravity"` scene key was added for the squash test.
+- **Findings:**
+  - Worst volume error in the drop: mass-spring 7.2% → 0.84%; XPBD 7.7% → 1.18% at matched stiffness, 0.90% at compliance 1e-6 (meets the 1% target).
+  - The penalty fixes the soft-spring inversion (M1-04): ks = 150 survives the drop.
+  - Mass-spring pays in time step: min substeps 38 → 60 (kv 1e5) → 159 (kv 1e6). XPBD gains: 39 → 24 (1e-5) → 22 (1e-6). At equal accuracy (~0.3%) the cost per frame is similar (MS 400 substeps 22 ms, XPBD 100 substeps 20 ms).
+  - Stable dt vs stiffness (X2-03, ks/k from 250 to 16,000 N/m): mass-spring + penalty keeps the k^-1/2 slope (58 → 261 substeps), lifted only at soft springs, where the penalty is the stiffest force. XPBD + volume (1e-5) needs 23–33 substeps at every k (dt ≈ 1.0–1.45 ms, no trend): volume constraints remove the tet inversions that limit edges-only XPBD.
+  - Hard volume constraints (compliance 0) invert tets with one Gauss-Seidel pass per substep: they fight the edge and contact constraints.
+  - Squash test (4 g, ks = 150): springs only lose 5.9% volume; with the penalty 0.7%, and the sides bulge past the rest outline.
+  - Known XPBD artifact: below ~50 substeps the impact injects spurious spin (up to ~25 deg/s), kept by the frictionless ground. Mass-spring on the same mesh shows none. Friction (C1) will mask it; a graph-colored (Jacobi-per-color) ordering is the real fix (Week 3).
 - **Capture:**
-  - `M2-01` / `X2-01`: side-by-side clips, volume term **off vs on** (same drop).
-  - `M2-02` / `X2-02`: volume-error plot for off vs on (from Q1).
-  - `X2-03`: a squash test (stills) showing the sideways bulge.
-- **Done when:** XPBD with volume constraints stays within 1% of rest volume during the drop (the proposal target). Record whatever mass-spring achieves.
+  - `M2-01` soft springs (ks = 150), volume off vs on, side by side.
+  - `M2-02` mass-spring volume error vs time, off vs on.
+  - `M2-03` squash test stills: rest / springs only / with penalty, with the rest outline marked.
+  - `M2-04` largest stable dt vs ks with the penalty.
+  - `X2-01` XPBD at 10 substeps, volume off (folds into a wad) vs on (survives, tumbles).
+  - `X2-02` volume error vs time for all five configurations.
+  - `X2-03` largest stable dt vs stiffness: both solvers, with and without volume terms.
+- **Done when:** XPBD with volume constraints stays within 1% of rest volume during the drop (done: 0.90%). Mass-spring result recorded (0.84% at kv = 1e5).
 
 ### Stage Q1: Metrics logger and plots (Day 3, in parallel)
 

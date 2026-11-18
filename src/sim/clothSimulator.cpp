@@ -306,7 +306,10 @@ void ClothSimulator::startRecording(const std::string &dir, double max_seconds,
   recording = true;
   record_dir = dir;
   record_frame_idx = 0;
-  record_next_time = sim_time; // the current frame is saved as frame 0
+  record_next_time = sim_time; // the current state is saved as frame 0
+  // drawContents() steps before captureFrame() runs, so without this the
+  // first saved frame would already be one step in (and saved twice).
+  record_hold_step = true;
   record_stop_time = max_seconds > 0 ? sim_time + max_seconds : -1;
   record_exit_when_done = exit_when_done;
   if (exit_when_done) is_paused = false;
@@ -358,6 +361,7 @@ void ClothSimulator::captureFrame(int fb_width, int fb_height) {
       return;
     }
     record_frame_idx++;
+    record_hold_step = false;  // frame 0 is saved; let the simulation run
     record_next_time += 1.0 / capture_fps;
   }
 }
@@ -365,7 +369,7 @@ void ClothSimulator::captureFrame(int fb_width, int fb_height) {
 void ClothSimulator::drawContents() {
   glEnable(GL_DEPTH_TEST);
 
-  if (!is_paused) {
+  if (!is_paused && !record_hold_step) {
     vector<Vector3D> external_accelerations = {gravity};
 
     if (body) {
@@ -1000,7 +1004,12 @@ void ClothSimulator::initGUI(Screen *screen) {
       panel->setLayout(layout);
       for (const Jello::SolverParam &sp : params) {
         new Label(panel, sp.name + " :", "sans-bold");
-        if (sp.intValue) {
+        if (sp.boolValue) {
+          CheckBox *box = new CheckBox(panel, "");
+          box->setChecked(*sp.boolValue);
+          bool *target = sp.boolValue;
+          box->setCallback([target](bool value) { *target = value; });
+        } else if (sp.intValue) {
           IntBox<int> *box = new IntBox<int>(panel);
           box->setEditable(true);
           box->setFixedSize(Vector2i(100, 20));

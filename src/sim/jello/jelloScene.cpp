@@ -38,6 +38,12 @@ double readNumber(const json &obj, const char *key, double fallback) {
   return obj[key].get<double>();
 }
 
+bool readBool(const json &obj, const char *key, bool fallback) {
+  if (!has(obj, key)) return fallback;
+  if (!obj[key].is_boolean()) throw std::runtime_error(std::string("\"") + key + "\" must be true or false");
+  return obj[key].get<bool>();
+}
+
 // Sets j["a"]["b"]... = value for the dotted key "a.b...".
 void applyOverride(json &j, const std::string &dotted, const std::string &value) {
   json parsed;
@@ -73,7 +79,7 @@ bool JelloScene::load(const std::string &path, std::string *error,
     json j;
     in >> j;
     for (const auto &o : overrides) applyOverride(j, o.first, o.second);
-    checkKeys(j, "scene", {"description", "jello", "solver", "mass_spring", "xpbd", "ground"});
+    checkKeys(j, "scene", {"description", "jello", "solver", "mass_spring", "xpbd", "gravity", "ground"});
 
     if (has(j, "jello")) {
       const json &b = j["jello"];
@@ -92,22 +98,28 @@ bool JelloScene::load(const std::string &path, std::string *error,
     }
 
     if (has(j, "solver")) solver = j["solver"].get<std::string>();
+    gravity = readVec3(j, "gravity", gravity);
 
     if (has(j, "mass_spring")) {
       const json &m = j["mass_spring"];
-      checkKeys(m, "mass_spring", {"ks", "kd", "substeps"});
+      checkKeys(m, "mass_spring", {"ks", "kd", "substeps", "kv", "volume"});
       massSpring.ks = readNumber(m, "ks", massSpring.ks);
       massSpring.kd = readNumber(m, "kd", massSpring.kd);
       massSpring.substeps = (int)readNumber(m, "substeps", massSpring.substeps);
+      massSpring.kv = readNumber(m, "kv", massSpring.kv);
+      massSpring.volume = readBool(m, "volume", massSpring.volume);
       if (massSpring.substeps < 1) throw std::runtime_error("\"substeps\" must be >= 1");
     }
 
     if (has(j, "xpbd")) {
       const json &x = j["xpbd"];
-      checkKeys(x, "xpbd", {"edge_compliance", "edge_damping", "substeps"});
+      checkKeys(x, "xpbd", {"edge_compliance", "edge_damping", "substeps", "volume_compliance", "volume"});
       xpbd.edgeCompliance = readNumber(x, "edge_compliance", xpbd.edgeCompliance);
       xpbd.edgeDamping = readNumber(x, "edge_damping", xpbd.edgeDamping);
       xpbd.substeps = (int)readNumber(x, "substeps", xpbd.substeps);
+      xpbd.volumeCompliance = readNumber(x, "volume_compliance", xpbd.volumeCompliance);
+      xpbd.volume = readBool(x, "volume", xpbd.volume);
+      if (xpbd.volumeCompliance < 0) throw std::runtime_error("\"volume_compliance\" must be >= 0");
       if (xpbd.substeps < 1) throw std::runtime_error("\"substeps\" must be >= 1");
       if (xpbd.edgeCompliance < 0) throw std::runtime_error("\"edge_compliance\" must be >= 0");
     }

@@ -12,10 +12,12 @@ XPBDBody::XPBDBody(const TetMesh &mesh, double density, const XPBDParams &params
 }
 
 std::vector<SolverParam> XPBDBody::params() {
-  std::vector<SolverParam> out(3);
+  std::vector<SolverParam> out(5);
   out[0].name = "edge compliance"; out[0].units = "m/N";   out[0].value = &p.edgeCompliance;
   out[1].name = "edge damping";    out[1].units = "N s/m"; out[1].value = &p.edgeDamping;
   out[2].name = "substeps";        out[2].intValue = &p.substeps; out[2].minValue = 1;
+  out[3].name = "volume";          out[3].boolValue = &p.volume;
+  out[4].name = "vol compliance";  out[4].units = "1/Pa";  out[4].value = &p.volumeCompliance;
   return out;
 }
 
@@ -36,6 +38,7 @@ void XPBDBody::substep(double h, double t, const SimContext &ctx) {
   }
 
   solveEdges(h);
+  if (p.volume) solveVolumes(h);
 
   // Contacts: project penetrating vertices back onto the surface. The
   // velocity update below then has no component into the surface, so
@@ -48,6 +51,25 @@ void XPBDBody::substep(double h, double t, const SimContext &ctx) {
   }
 
   for (int i = 0; i < nv; i++) v[i] = (x[i] - prev[i]) / h;
+}
+
+void XPBDBody::solveVolumes(double h) {
+  // Same sweep direction as the edge pass that just ran (solveEdges flipped it).
+  const size_t m = mesh_.tets.size();
+  for (size_t k = 0; k < m; k++) {
+    const size_t t = forwardSweep ? k : m - 1 - k;
+    const auto &tet = mesh_.tets[t];
+    Vector3D grad[4];
+    tetVolumeGradients(x[tet[0]], x[tet[1]], x[tet[2]], x[tet[3]], grad);
+
+    double denom = p.volumeCompliance * mesh_.restVolumes[t] / (h * h);
+    for (int i = 0; i < 4; i++) denom += invMass[tet[i]] * grad[i].norm2();
+    if (denom <= 0) continue;
+
+    double C = tetVolume(x[tet[0]], x[tet[1]], x[tet[2]], x[tet[3]]) - mesh_.restVolumes[t];
+    double dLambda = -C / denom;
+    for (int i = 0; i < 4; i++) x[tet[i]] += invMass[tet[i]] * dLambda * grad[i];
+  }
 }
 
 void XPBDBody::solveEdges(double h) {

@@ -18,12 +18,13 @@ struct SimContext {
 };
 
 // One tunable solver parameter, so the viewer can build its controls without
-// knowing which solver it has. Exactly one of `value` / `intValue` is set.
+// knowing which solver it has. Exactly one of the value pointers is set.
 struct SolverParam {
   std::string name;
   std::string units;
   double *value = nullptr;
   int *intValue = nullptr;
+  bool *boolValue = nullptr;
   double minValue = 0;
 };
 
