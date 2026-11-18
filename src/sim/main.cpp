@@ -18,6 +18,7 @@
 #include "cloth.h"
 #include "clothSimulator.h"
 #include "json.hpp"
+#include "jello/jelloScene.h"
 #include "misc/file_utils.h"
 
 typedef uint32_t gid_t;
@@ -151,9 +152,19 @@ void usageError(const char *binaryName) {
   printf("                     directory, starting unpaused at launch.\n");
   printf("  -T     <FLOAT>     With -R: stop after this many simulated seconds\n");
   printf("                     and exit.\n");
+  printf("  -S     <STRING>    Shader to start with (Wireframe, Normal, Phong, ...).\n");
+  printf("  -C     <INT>       Jello: camera preset 1 front, 2 three-quarter, 3 top.\n");
+  printf("  -K                 Jello: start with the cutaway on.\n");
+  printf("  -E                 Jello: start with the edge overlay on.\n");
+  printf("  -P     <STRING>    Save a screenshot of the first frame to this PNG\n");
+  printf("                     and exit.\n");
+  printf("\n");
+  printf("Scenes with a top-level \"jello\" object (scene/jello/*.json) load a\n");
+  printf("tet-mesh soft body instead of a cloth.\n");
   printf("\n");
   printf("Keys: P pause, N step, R reset, Space reset camera,\n");
-  printf("      S screenshot, V start/stop recording (saved under out/capture/).\n");
+  printf("      S screenshot, V start/stop recording (saved under out/capture/),\n");
+  printf("      jello only: 1/2/3 camera presets, C cutaway, E edge overlay.\n");
   exit(-1);
 }
 
@@ -416,8 +427,13 @@ int main(int argc, char **argv) {
 
   std::string record_dir;
   double record_seconds = -1;
+  std::string shader_name;
+  int camera_preset = 0;
+  bool start_cutaway = false;
+  bool start_edges = false;
+  std::string screenshot_path;
   
-  while ((c = getopt (argc, argv, "f:r:a:o:R:T:")) != -1) {
+  while ((c = getopt (argc, argv, "f:r:a:o:R:T:S:C:KEP:")) != -1) {
     switch (c) {
       case 'f': {
         file_to_load_from = optarg;
@@ -456,6 +472,26 @@ int main(int argc, char **argv) {
         record_seconds = atof(optarg);
         break;
       }
+      case 'S': {
+        shader_name = optarg;
+        break;
+      }
+      case 'C': {
+        camera_preset = atoi(optarg);
+        break;
+      }
+      case 'K': {
+        start_cutaway = true;
+        break;
+      }
+      case 'E': {
+        start_edges = true;
+        break;
+      }
+      case 'P': {
+        screenshot_path = optarg;
+        break;
+      }
       default: {
         usageError(argv[0]);
         break;
@@ -477,9 +513,26 @@ int main(int argc, char **argv) {
     file_to_load_from = def_fname.str();
   }
   
-  bool success = loadObjectsFromFile(file_to_load_from, &cloth, &cp, &objects, sphere_num_lat, sphere_num_lon);
-  if (!success) {
-    std::cout << "Warn: Unable to load from file: " << file_to_load_from << std::endl;
+  // Jello scenes build a tet-mesh soft body; everything else is a cloth scene.
+  bool jello_mode = Jello::JelloScene::isJelloScene(file_to_load_from);
+  Jello::JelloScene jello_scene;
+  std::unique_ptr<Jello::SoftBody> jello_body;
+  if (jello_mode) {
+    std::string error;
+    if (!jello_scene.load(file_to_load_from, &error) || !(jello_body = jello_scene.buildBody(&error))) {
+      std::cout << "Error: " << error << std::endl;
+      return -1;
+    }
+    const Jello::TetMesh &mesh = jello_body->mesh();
+    std::cout << "Jello: " << mesh.nx << "x" << mesh.ny << "x" << mesh.nz << " cells, "
+              << mesh.numVerts() << " verts, " << mesh.tets.size() << " tets, "
+              << mesh.surfaceTris.size() << " surface triangles, solver " << jello_body->name()
+              << std::endl;
+  } else {
+    bool success = loadObjectsFromFile(file_to_load_from, &cloth, &cp, &objects, sphere_num_lat, sphere_num_lon);
+    if (!success) {
+      std::cout << "Warn: Unable to load from file: " << file_to_load_from << std::endl;
+    }
   }
 
   glfwSetErrorCallback(error_callback);
@@ -487,15 +540,27 @@ int main(int argc, char **argv) {
   createGLContexts();
 
   // Initialize the Cloth object
-  cloth.buildGrid();
-  cloth.buildClothMesh();
+  if (!jello_mode) {
+    cloth.buildGrid();
+    cloth.buildClothMesh();
+  }
 
   // Initialize the ClothSimulator object
   app = new ClothSimulator(project_root, screen);
   app->loadCloth(&cloth);
   app->loadClothParameters(&cp);
   app->loadCollisionObjects(&objects);
+  if (jello_mode) {
+    app->loadSoftBody(jello_body.get(), jello_scene.hasGround, jello_scene.groundY);
+  }
+  if (!shader_name.empty() && !app->setShaderByName(shader_name)) {
+    std::cout << "Warn: no shader named \"" << shader_name << "\"" << std::endl;
+  }
   app->init();
+  if (camera_preset) app->setCameraPreset(camera_preset);
+  if (start_cutaway) app->setCutaway(true);
+  if (start_edges) app->setShowEdges(true);
+  if (!screenshot_path.empty()) app->requestScreenshotTo(screenshot_path, /*exit_after=*/true);
 
   if (!record_dir.empty()) {
     app->startRecording(record_dir, record_seconds, /*exit_when_done=*/record_seconds > 0);

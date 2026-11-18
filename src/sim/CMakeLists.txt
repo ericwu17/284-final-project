@@ -68,6 +68,7 @@ link_directories(
 add_executable(clothsim ${CLOTHSIM_VIEWER_SOURCE})
 
 target_link_libraries(clothsim
+    jello_core
     CGL ${CGL_LIBRARIES}
     nanogui ${NANOGUI_EXTRA_LIBS}
     ${FREETYPE_LIBRARIES}
@@ -90,6 +91,8 @@ install(TARGETS clothsim DESTINATION ${Jello_SOURCE_DIR})
 #-------------------------------------------------------------------------------
 add_library(jello_core STATIC
     jello/tetMesh.cpp
+    jello/softBody.cpp
+    jello/jelloScene.cpp
 )
 target_include_directories(jello_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(jello_core PUBLIC CGL)

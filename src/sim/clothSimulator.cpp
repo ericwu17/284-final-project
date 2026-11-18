@@ -1,4 +1,5 @@
 #include <cmath>
+#include <set>
 #include <glad/glad.h>
 
 #include <CGL/vector3D.h>
@@ -13,6 +14,7 @@
 #include "misc/camera_info.h"
 #include "misc/file_utils.h"
 #include "misc/frame_capture.h"
+#include "jello/tetMesh.h"
 // Needed to generate stb_image binaries. Should only define in exactly one source file importing stb_image.h.
 #define STB_IMAGE_IMPLEMENTATION
 #include "misc/stb_image.h"
@@ -187,6 +189,12 @@ void ClothSimulator::loadClothParameters(ClothParameters *cp) { this->cp = cp; }
 
 void ClothSimulator::loadCollisionObjects(vector<CollisionObject *> *objects) { this->collision_objects = objects; }
 
+void ClothSimulator::loadSoftBody(Jello::SoftBody *body, bool has_ground, double ground_y) {
+  this->body = body;
+  this->has_ground = has_ground;
+  this->ground_y = ground_y;
+}
+
 /**
  * Initializes the cloth simulation and spawns a new thread to separate
  * rendering from simulation.
@@ -204,6 +212,32 @@ void ClothSimulator::init() {
   camera_info.vFov = 35;
   camera_info.nClip = 0.01;
   camera_info.fClip = 10000;
+
+  if (body) {
+    // Frame the block; scale the camera limits and the light to its size.
+    const Jello::TetMesh &mesh = body->mesh();
+    scene_center = mesh.origin + 0.5 * mesh.size;
+    scene_size = max(mesh.size.x, max(mesh.size.y, mesh.size.z));
+    canonical_view_distance = 2.8 * scene_size;
+    scroll_rate = scene_size / 10;
+    min_view_distance = 0.3 * scene_size;
+    max_view_distance = 30 * scene_size;
+    view_distance = canonical_view_distance;
+
+    // Point light above, in front, and to the right, bright enough that the
+    // irradiance at the block is about 0.75 (the Phong shader divides by r^2).
+    light_pos = scene_center + scene_size * Vector3D(3, 8, 6);
+    double r2 = (light_pos - scene_center).norm2();
+    light_intensity = Vector3D(0.75 * r2, 0.75 * r2, 0.75 * r2);
+
+    screen_w = default_window_size(0);
+    screen_h = default_window_size(1);
+    camera.configure(camera_info, screen_w, screen_h);
+    canonicalCamera.configure(camera_info, screen_w, screen_h);
+    setCameraPreset(2);
+    canonicalCamera.copy_placement(camera);
+    return;
+  }
 
   // Try to intelligently figure out the camera target
 
@@ -243,7 +277,19 @@ bool ClothSimulator::isAlive() { return is_alive; }
 // Frame capture
 // ----------------------------------------------------------------------------
 
-void ClothSimulator::requestScreenshot() { screenshot_requested = true; }
+void ClothSimulator::requestScreenshot() {
+  screenshot_requested = true;
+  screenshot_path.clear();
+  screenshot_exit = false;
+  screenshot_delay_frames = 0;
+}
+
+void ClothSimulator::requestScreenshotTo(const std::string &path, bool exit_after) {
+  screenshot_requested = true;
+  screenshot_path = path;
+  screenshot_exit = exit_after;
+  screenshot_delay_frames = 3;  // the first frames after launch can be incomplete
+}
 
 void ClothSimulator::startRecording(const std::string &dir, double max_seconds,
                                     bool exit_when_done) {
@@ -270,10 +316,17 @@ void ClothSimulator::stopRecording() {
 
 void ClothSimulator::captureFrame(int fb_width, int fb_height) {
   if (screenshot_requested) {
-    screenshot_requested = false;
-    std::string path = m_project_root + "/out/capture/shot_" + FrameCapture::timestamp() + ".png";
-    if (FrameCapture::save_framebuffer_png(path, fb_width, fb_height)) {
-      std::cout << "[Capture] Saved screenshot " << path << std::endl;
+    if (screenshot_delay_frames > 0) {
+      screenshot_delay_frames--;
+    } else {
+      screenshot_requested = false;
+      std::string path = screenshot_path.empty()
+          ? m_project_root + "/out/capture/shot_" + FrameCapture::timestamp() + ".png"
+          : screenshot_path;
+      if (FrameCapture::save_framebuffer_png(path, fb_width, fb_height)) {
+        std::cout << "[Capture] Saved screenshot " << path << std::endl;
+      }
+      if (screenshot_exit) is_alive = false;
     }
   }
 
@@ -305,8 +358,15 @@ void ClothSimulator::drawContents() {
   if (!is_paused) {
     vector<Vector3D> external_accelerations = {gravity};
 
-    for (int i = 0; i < simulation_steps; i++) {
-      cloth->simulate(frames_per_sec, simulation_steps, cp, external_accelerations, collision_objects);
+    if (body) {
+      Jello::SimContext ctx;
+      ctx.gravity = gravity;
+      ctx.time = sim_time;
+      body->step(1.0 / frames_per_sec, ctx);
+    } else {
+      for (int i = 0; i < simulation_steps; i++) {
+        cloth->simulate(frames_per_sec, simulation_steps, cp, external_accelerations, collision_objects);
+      }
     }
     sim_time += 1.0 / frames_per_sec;
   }
@@ -331,13 +391,21 @@ void ClothSimulator::drawContents() {
   shader.setUniform("u_model", model);
   shader.setUniform("u_view_projection", viewProjection);
 
+  // With the edge overlay on, push filled triangles slightly back in depth so
+  // the edge lines drawn on top of them win the depth test.
+  bool edge_overlay = body && show_edges && active_shader.type_hint != WIREFRAME;
+  if (edge_overlay) {
+    glEnable(GL_POLYGON_OFFSET_FILL);
+    glPolygonOffset(1.0f, 1.0f);
+  }
+
   switch (active_shader.type_hint) {
   case WIREFRAME:
     shader.setUniform("u_color", color, false);
-    drawWireframe(shader);
+    if (body) drawBodyWireframe(shader); else drawWireframe(shader);
     break;
   case NORMALS:
-    drawNormals(shader);
+    if (body) drawBodySurface(shader); else drawNormals(shader);
     break;
   case PHONG:
   
@@ -345,8 +413,8 @@ void ClothSimulator::drawContents() {
     Vector3D cam_pos = camera.position();
     shader.setUniform("u_color", color, false);
     shader.setUniform("u_cam_pos", Vector3f(cam_pos.x, cam_pos.y, cam_pos.z), false);
-    shader.setUniform("u_light_pos", Vector3f(0.5, 2, 2), false);
-    shader.setUniform("u_light_intensity", Vector3f(3, 3, 3), false);
+    shader.setUniform("u_light_pos", Vector3f(light_pos.x, light_pos.y, light_pos.z), false);
+    shader.setUniform("u_light_intensity", Vector3f(light_intensity.x, light_intensity.y, light_intensity.z), false);
     shader.setUniform("u_texture_1_size", Vector2f(m_gl_texture_1_size.x, m_gl_texture_1_size.y), false);
     shader.setUniform("u_texture_2_size", Vector2f(m_gl_texture_2_size.x, m_gl_texture_2_size.y), false);
     shader.setUniform("u_texture_3_size", Vector2f(m_gl_texture_3_size.x, m_gl_texture_3_size.y), false);
@@ -361,13 +429,182 @@ void ClothSimulator::drawContents() {
     shader.setUniform("u_height_scaling", m_height_scaling, false);
     
     shader.setUniform("u_texture_cubemap", 5, false);
-    drawPhong(shader);
+    if (body) drawBodySurface(shader); else drawPhong(shader);
     break;
   }
 
-  for (CollisionObject *co : *collision_objects) {
-    co->render(shader);
+  if (body) {
+    // The Normal shader colors the ground +y green like the block's top face,
+    // which hides the top edge; leave the ground out of that view.
+    if (has_ground && active_shader.type_hint != NORMALS) drawGround(shader);
+    if (edge_overlay) {
+      glDisable(GL_POLYGON_OFFSET_FILL);
+      for (const UserShader &us : shaders) {
+        if (us.type_hint != WIREFRAME) continue;
+        GLShader &ws = *us.nanogui_shader;
+        ws.bind();
+        ws.setUniform("u_model", model);
+        ws.setUniform("u_view_projection", viewProjection);
+        ws.setUniform("u_color", nanogui::Color(0.08f, 0.08f, 0.1f, 1.0f), false);
+        drawSurfaceEdges(ws);
+        break;
+      }
+    }
+  } else {
+    for (CollisionObject *co : *collision_objects) {
+      co->render(shader);
+    }
   }
+}
+
+// ----------------------------------------------------------------------------
+// Jello mode drawing
+// ----------------------------------------------------------------------------
+
+void ClothSimulator::drawBodyWireframe(GLShader &shader) {
+  const vector<Vector3D> &x = body->x;
+  const auto &edges = cutaway ? cutaway_edges : body->mesh().edges;
+
+  MatrixXf positions(4, edges.size() * 2);
+  for (size_t i = 0; i < edges.size(); i++) {
+    const Vector3D &a = x[edges[i][0]], &b = x[edges[i][1]];
+    positions.col(2 * i) << a.x, a.y, a.z, 1.0;
+    positions.col(2 * i + 1) << b.x, b.y, b.z, 1.0;
+  }
+  shader.uploadAttrib("in_position", positions, false);
+  shader.drawArray(GL_LINES, 0, edges.size() * 2);
+}
+
+void ClothSimulator::drawBodySurface(GLShader &shader) {
+  const vector<Vector3D> &x = body->x;
+  const auto &tris = cutaway ? cutaway_tris : body->mesh().surfaceTris;
+
+  // Full surface: smooth, area-weighted vertex normals, the same ones the
+  // path tracer computes from the exported mesh. Cutaway: flat face normals,
+  // so the cut faces read as flat planes.
+  vector<Vector3D> vertex_normals;
+  if (!cutaway) {
+    vertex_normals.assign(x.size(), Vector3D(0, 0, 0));
+    for (const auto &t : tris) {
+      Vector3D n = cross(x[t[1]] - x[t[0]], x[t[2]] - x[t[0]]);  // length = 2 * area
+      for (int v : t) vertex_normals[v] += n;
+    }
+    for (Vector3D &n : vertex_normals)
+      if (n.norm2() > 0) n.normalize();
+  }
+
+  const size_t n = tris.size() * 3;
+  MatrixXf positions(4, n), normals(4, n), uvs(2, n), tangents(4, n);
+  for (size_t i = 0; i < tris.size(); i++) {
+    const auto &t = tris[i];
+    Vector3D face_n = cross(x[t[1]] - x[t[0]], x[t[2]] - x[t[0]]).unit();
+    for (int c = 0; c < 3; c++) {
+      const Vector3D &p = x[t[c]];
+      const Vector3D &nv = cutaway ? face_n : vertex_normals[t[c]];
+      positions.col(3 * i + c) << p.x, p.y, p.z, 1.0;
+      normals.col(3 * i + c) << nv.x, nv.y, nv.z, 0.0;
+      uvs.col(3 * i + c) << 0.0, 0.0;
+      tangents.col(3 * i + c) << 1.0, 0.0, 0.0, 1.0;
+    }
+  }
+
+  shader.uploadAttrib("in_position", positions, false);
+  if (shader.attrib("in_normal", false) != -1) shader.uploadAttrib("in_normal", normals, false);
+  if (shader.attrib("in_uv", false) != -1) shader.uploadAttrib("in_uv", uvs, false);
+  if (shader.attrib("in_tangent", false) != -1) shader.uploadAttrib("in_tangent", tangents, false);
+  shader.drawArray(GL_TRIANGLES, 0, n);
+}
+
+void ClothSimulator::drawSurfaceEdges(GLShader &shader) {
+  // Unique edges of the triangles currently drawn (full surface or cutaway).
+  const vector<Vector3D> &x = body->x;
+  const auto &tris = cutaway ? cutaway_tris : body->mesh().surfaceTris;
+  std::set<std::pair<int, int>> edge_set;
+  for (const auto &t : tris)
+    for (int c = 0; c < 3; c++)
+      edge_set.insert({min(t[c], t[(c + 1) % 3]), max(t[c], t[(c + 1) % 3])});
+
+  MatrixXf positions(4, edge_set.size() * 2);
+  size_t i = 0;
+  for (const auto &e : edge_set) {
+    const Vector3D &a = x[e.first], &b = x[e.second];
+    positions.col(i++) << a.x, a.y, a.z, 1.0;
+    positions.col(i++) << b.x, b.y, b.z, 1.0;
+  }
+  shader.uploadAttrib("in_position", positions, false);
+  shader.drawArray(GL_LINES, 0, edge_set.size() * 2);
+}
+
+void ClothSimulator::drawGround(GLShader &shader) {
+  // A square of side 8x the block, centered under it. Lowered slightly so the
+  // block's bottom edges don't z-fight with it.
+  double h = 4 * scene_size;
+  float y = ground_y - 0.002 * scene_size;
+  float cx = scene_center.x, cz = scene_center.z;
+
+  MatrixXf positions(4, 4), normals(4, 4), uvs(2, 4), tangents(4, 4);
+  positions.col(0) << cx - h, y, cz - h, 1.0;
+  positions.col(1) << cx - h, y, cz + h, 1.0;
+  positions.col(2) << cx + h, y, cz - h, 1.0;
+  positions.col(3) << cx + h, y, cz + h, 1.0;
+  for (int i = 0; i < 4; i++) {
+    normals.col(i) << 0.0, 1.0, 0.0, 0.0;
+    uvs.col(i) << 0.0, 0.0;
+    tangents.col(i) << 1.0, 0.0, 0.0, 1.0;
+  }
+
+  if (shader.uniform("u_color", false) != -1)
+    shader.setUniform("u_color", nanogui::Color(0.35f, 0.37f, 0.4f, 1.0f), false);
+  shader.uploadAttrib("in_position", positions, false);
+  if (shader.attrib("in_normal", false) != -1) shader.uploadAttrib("in_normal", normals, false);
+  if (shader.attrib("in_uv", false) != -1) shader.uploadAttrib("in_uv", uvs, false);
+  if (shader.attrib("in_tangent", false) != -1) shader.uploadAttrib("in_tangent", tangents, false);
+  shader.drawArray(GL_TRIANGLE_STRIP, 0, 4);
+}
+
+void ClothSimulator::setCameraPreset(int preset) {
+  if (!body) return;
+  double phi, theta, r = canonical_view_distance;
+  switch (preset) {
+  case 1: phi = PI / 2 - 0.12; theta = 0; break;           // front, slightly above
+  case 3: phi = 0.02; theta = 0; r *= 1.1; break;          // top-down
+  // Three-quarter, ~29 deg up and ~31 deg around from the front. Not 45 deg:
+  // that looks straight down the cube diagonal and front/back edges overlap.
+  default: phi = PI / 2 - 0.5; theta = 0.55; break;
+  }
+  camera.place(scene_center, phi, theta, r, min_view_distance, max_view_distance);
+}
+
+bool ClothSimulator::setShaderByName(const std::string &name) {
+  for (size_t i = 0; i < shaders_combobox_names.size(); i++) {
+    if (shaders_combobox_names[i] == name) {
+      active_shader_idx = i;
+      return true;
+    }
+  }
+  return false;
+}
+
+void ClothSimulator::setCutaway(bool on) {
+  cutaway = on && body;
+  if (!cutaway) return;
+
+  // Keep every tet except those whose rest centroid is in the octant facing
+  // the three-quarter camera (+x, +y, +z of the block center).
+  const Jello::TetMesh &mesh = body->mesh();
+  vector<std::array<int, 4>> kept;
+  for (const auto &t : mesh.tets) {
+    Vector3D c = (mesh.rest[t[0]] + mesh.rest[t[1]] + mesh.rest[t[2]] + mesh.rest[t[3]]) / 4;
+    if (!(c.x > scene_center.x && c.y > scene_center.y && c.z > scene_center.z)) kept.push_back(t);
+  }
+  cutaway_tris = Jello::boundaryFaces(mesh.rest, kept);
+
+  std::set<std::pair<int, int>> edge_set;
+  for (const auto &t : kept)
+    for (int a = 0; a < 4; a++)
+      for (int b = a + 1; b < 4; b++) edge_set.insert({min(t[a], t[b]), max(t[a], t[b])});
+  cutaway_edges.clear();
+  for (const auto &e : edge_set) cutaway_edges.push_back({e.first, e.second});
 }
 
 void ClothSimulator::drawWireframe(GLShader &shader) {
@@ -639,7 +876,20 @@ bool ClothSimulator::keyCallbackEvent(int key, int scancode, int action,
       break;
     case 'r':
     case 'R':
-      cloth->reset();
+      if (body) body->reset(); else cloth->reset();
+      break;
+    case '1':
+    case '2':
+    case '3':
+      setCameraPreset(key - '0');
+      break;
+    case 'c':
+    case 'C':
+      setCutaway(!cutaway);
+      break;
+    case 'e':
+    case 'E':
+      show_edges = !show_edges;
       break;
     case ' ':
       resetCamera();
@@ -698,67 +948,86 @@ void ClothSimulator::initGUI(Screen *screen) {
   window->setPosition(Vector2i(default_window_size(0) - 245, 15));
   window->setLayout(new GroupLayout(15, 6, 14, 5));
 
-  // Spring types
+  if (body) {
+    // Jello: what is loaded, and the keys for views and cutaway.
+    const Jello::TetMesh &mesh = body->mesh();
+    new Label(window, "Jello", "sans-bold");
+    new Label(window, "solver: " + body->name());
+    new Label(window, "cells: " + std::to_string(mesh.nx) + " x " + std::to_string(mesh.ny) +
+                          " x " + std::to_string(mesh.nz));
+    new Label(window, std::to_string(mesh.numVerts()) + " verts, " +
+                          std::to_string(mesh.tets.size()) + " tets");
+    char mass_text[64];
+    snprintf(mass_text, sizeof(mass_text), "mass: %.3f kg", body->totalMass());
+    new Label(window, mass_text);
+    new Label(window, "Keys", "sans-bold");
+    new Label(window, "1/2/3: front / 3-4 / top view");
+    new Label(window, "C: cutaway   E: edges");
+    new Label(window, "R: reset");
+    new Label(window, "S: screenshot   V: record");
+  } else {
+    // Spring types
 
-  new Label(window, "Spring types", "sans-bold");
+    new Label(window, "Spring types", "sans-bold");
 
-  {
-    Button *b = new Button(window, "structural");
-    b->setFlags(Button::ToggleButton);
-    b->setPushed(cp->enable_structural_constraints);
-    b->setFontSize(14);
-    b->setChangeCallback(
-        [this](bool state) { cp->enable_structural_constraints = state; });
+    {
+      Button *b = new Button(window, "structural");
+      b->setFlags(Button::ToggleButton);
+      b->setPushed(cp->enable_structural_constraints);
+      b->setFontSize(14);
+      b->setChangeCallback(
+          [this](bool state) { cp->enable_structural_constraints = state; });
 
-    b = new Button(window, "shearing");
-    b->setFlags(Button::ToggleButton);
-    b->setPushed(cp->enable_shearing_constraints);
-    b->setFontSize(14);
-    b->setChangeCallback(
-        [this](bool state) { cp->enable_shearing_constraints = state; });
+      b = new Button(window, "shearing");
+      b->setFlags(Button::ToggleButton);
+      b->setPushed(cp->enable_shearing_constraints);
+      b->setFontSize(14);
+      b->setChangeCallback(
+          [this](bool state) { cp->enable_shearing_constraints = state; });
 
-    b = new Button(window, "bending");
-    b->setFlags(Button::ToggleButton);
-    b->setPushed(cp->enable_bending_constraints);
-    b->setFontSize(14);
-    b->setChangeCallback(
-        [this](bool state) { cp->enable_bending_constraints = state; });
-  }
+      b = new Button(window, "bending");
+      b->setFlags(Button::ToggleButton);
+      b->setPushed(cp->enable_bending_constraints);
+      b->setFontSize(14);
+      b->setChangeCallback(
+          [this](bool state) { cp->enable_bending_constraints = state; });
+    }
 
-  // Mass-spring parameters
+    // Mass-spring parameters
 
-  new Label(window, "Parameters", "sans-bold");
+    new Label(window, "Parameters", "sans-bold");
 
-  {
-    Widget *panel = new Widget(window);
-    GridLayout *layout =
-        new GridLayout(Orientation::Horizontal, 2, Alignment::Middle, 5, 5);
-    layout->setColAlignment({Alignment::Maximum, Alignment::Fill});
-    layout->setSpacing(0, 10);
-    panel->setLayout(layout);
+    {
+      Widget *panel = new Widget(window);
+      GridLayout *layout =
+          new GridLayout(Orientation::Horizontal, 2, Alignment::Middle, 5, 5);
+      layout->setColAlignment({Alignment::Maximum, Alignment::Fill});
+      layout->setSpacing(0, 10);
+      panel->setLayout(layout);
 
-    new Label(panel, "density :", "sans-bold");
+      new Label(panel, "density :", "sans-bold");
 
-    FloatBox<double> *fb = new FloatBox<double>(panel);
-    fb->setEditable(true);
-    fb->setFixedSize(Vector2i(100, 20));
-    fb->setFontSize(14);
-    fb->setValue(cp->density / 10);
-    fb->setUnits("g/cm^2");
-    fb->setSpinnable(true);
-    fb->setCallback([this](float value) { cp->density = (double)(value * 10); });
+      FloatBox<double> *fb = new FloatBox<double>(panel);
+      fb->setEditable(true);
+      fb->setFixedSize(Vector2i(100, 20));
+      fb->setFontSize(14);
+      fb->setValue(cp->density / 10);
+      fb->setUnits("g/cm^2");
+      fb->setSpinnable(true);
+      fb->setCallback([this](float value) { cp->density = (double)(value * 10); });
 
-    new Label(panel, "ks :", "sans-bold");
+      new Label(panel, "ks :", "sans-bold");
 
-    fb = new FloatBox<double>(panel);
-    fb->setEditable(true);
-    fb->setFixedSize(Vector2i(100, 20));
-    fb->setFontSize(14);
-    fb->setValue(cp->ks);
-    fb->setUnits("N/m");
-    fb->setSpinnable(true);
-    fb->setMinValue(0);
-    fb->setCallback([this](float value) { cp->ks = value; });
+      fb = new FloatBox<double>(panel);
+      fb->setEditable(true);
+      fb->setFixedSize(Vector2i(100, 20));
+      fb->setFontSize(14);
+      fb->setValue(cp->ks);
+      fb->setUnits("N/m");
+      fb->setSpinnable(true);
+      fb->setMinValue(0);
+      fb->setCallback([this](float value) { cp->ks = value; });
+    }
   }
 
   // Simulation constants
@@ -783,44 +1052,48 @@ void ClothSimulator::initGUI(Screen *screen) {
     fsec->setSpinnable(true);
     fsec->setCallback([this](int value) { frames_per_sec = value; });
 
-    new Label(panel, "steps/frame :", "sans-bold");
+    if (!body) {  // jello solvers choose their own substeps
+      new Label(panel, "steps/frame :", "sans-bold");
 
-    IntBox<int> *num_steps = new IntBox<int>(panel);
-    num_steps->setEditable(true);
-    num_steps->setFixedSize(Vector2i(100, 20));
-    num_steps->setFontSize(14);
-    num_steps->setValue(simulation_steps);
-    num_steps->setSpinnable(true);
-    num_steps->setMinValue(0);
-    num_steps->setCallback([this](int value) { simulation_steps = value; });
+      IntBox<int> *num_steps = new IntBox<int>(panel);
+      num_steps->setEditable(true);
+      num_steps->setFixedSize(Vector2i(100, 20));
+      num_steps->setFontSize(14);
+      num_steps->setValue(simulation_steps);
+      num_steps->setSpinnable(true);
+      num_steps->setMinValue(0);
+      num_steps->setCallback([this](int value) { simulation_steps = value; });
+    }
   }
 
-  // Damping slider and textbox
+  if (!body) {  // cloth damping; jello damping is a solver parameter
+    // Damping slider and textbox
 
-  new Label(window, "Damping", "sans-bold");
+    new Label(window, "Damping", "sans-bold");
 
-  {
-    Widget *panel = new Widget(window);
-    panel->setLayout(
-        new BoxLayout(Orientation::Horizontal, Alignment::Middle, 0, 5));
+    {
+      Widget *panel = new Widget(window);
+      panel->setLayout(
+          new BoxLayout(Orientation::Horizontal, Alignment::Middle, 0, 5));
 
-    Slider *slider = new Slider(panel);
-    slider->setValue(cp->damping);
-    slider->setFixedWidth(105);
+      Slider *slider = new Slider(panel);
+      slider->setValue(cp->damping);
+      slider->setFixedWidth(105);
 
-    TextBox *percentage = new TextBox(panel);
-    percentage->setFixedWidth(75);
-    percentage->setValue(to_string(cp->damping));
-    percentage->setUnits("%");
-    percentage->setFontSize(14);
+      TextBox *percentage = new TextBox(panel);
+      percentage->setFixedWidth(75);
+      percentage->setValue(to_string(cp->damping));
+      percentage->setUnits("%");
+      percentage->setFontSize(14);
 
-    slider->setCallback([percentage](float value) {
-      percentage->setValue(std::to_string(value));
-    });
-    slider->setFinalCallback([&](float value) {
-      cp->damping = (double)value;
-      // cout << "Final slider value: " << (int)(value * 100) << endl;
-    });
+      slider->setCallback([percentage](float value) {
+        percentage->setValue(std::to_string(value));
+      });
+      slider->setFinalCallback([&](float value) {
+        cp->damping = (double)value;
+        // cout << "Final slider value: " << (int)(value * 100) << endl;
+      });
+    }
   }
 
   // Gravity

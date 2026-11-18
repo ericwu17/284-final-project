@@ -147,17 +147,19 @@ Each stage lists: **Build** (what to write), **Verify** (how you know it's right
 
 ### Stage P2: Viewer shows the soft body (Day 1–2)
 
-- **Build:** switch `ClothSimulator` from `Cloth*` to `SoftBody*` (it is fine to drop the cloth path).
+- **Build:** add a jello mode to `ClothSimulator`. Scenes with a top-level `"jello"` object (`scene/jello/*.json`, parsed by `JelloScene`) load a `SoftBody`; other scenes still load the HW4 cloth, so the S0 captures stay reproducible.
   - Wireframe draws tet edges.
   - Normal and Phong shaders draw `surfaceTris` with per-vertex normals computed each frame (area-weighted, same as the path tracer).
-  - GUI controls: solver dropdown; ks, kd, kv / compliances; volume toggle; substeps; plate amplitude and frequency; camera presets `1`/`2`/`3`.
-  - `R` resets.
-  - Ground and plate draw through a small GL wrapper that lives outside `jello_core`.
-- **Verify:** the static block looks right in all three shaders. Toggling between wireframe and surface works.
+  - Keys: camera presets `1`/`2`/`3` (front, three-quarter, top), `C` cutaway, `E` edge overlay, `R` reset.
+  - Flags for scripted captures: `-S <shader>`, `-C <preset>`, `-K` (cutaway), `-E` (edges), `-P <file.png>` (screenshot, then exit).
+  - A placeholder `static` solver holds the rest pose until M1/X1. Solver parameter controls (ks, kd, kv / compliances, volume toggle, substeps, plate) arrive with the solvers that use them.
+  - The ground is drawn by the viewer, outside `jello_core`; the plate follows in C2.
+- **Verify:** the static block looks right in all three shaders. Toggling between wireframe and surface works. Cloth scenes still run.
 - **Capture:**
   - `P2-01` tet wireframe of a 4³ block (sparse enough to read).
-  - `P2-02` 8³ surface with the Normal shader.
-  - `P2-03` cutaway in the viewer: draw only tets with centroid z < 0.5·Lz to show the interior tets.
+  - `P2-02` 8³ surface with the Normal shader (shows outward normals).
+  - `P2-03` cutaway: hide the tets in the octant facing the camera, draw the rest flat-shaded with edges, to show the interior tets.
+  - `P2-04`/`P2-05` 8³ Phong with smooth normals, without and with edges (the rounded look the path tracer will also show).
 - **Done when:** both solvers (once they exist) plug in without viewer changes.
 
 ### Stage M1: Mass-spring with gravity and ground (Day 2)

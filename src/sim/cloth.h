@@ -72,7 +72,7 @@ struct Cloth {
   vector<PointMass> point_masses;
   vector<vector<int>> pinned;
   vector<Spring> springs;
-  ClothMesh *clothMesh;
+  ClothMesh *clothMesh = nullptr;
 
   // Spatial hashing
   unordered_map<float, vector<PointMass *> *> map;

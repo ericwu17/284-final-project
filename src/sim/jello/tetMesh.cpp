@@ -44,6 +44,28 @@ const int TET_FACES[4][4] = {{1, 2, 3, 0}, {0, 2, 3, 1}, {0, 1, 3, 2}, {0, 1, 2,
 
 } // namespace
 
+std::vector<std::array<int, 3>> boundaryFaces(const std::vector<Vector3D> &pos,
+                                              const std::vector<std::array<int, 4>> &tets) {
+  // Count every tet face, then collect the ones seen once, in tet order.
+  std::unordered_map<uint64_t, int> faceCount;
+  faceCount.reserve(tets.size() * 4);
+  for (const auto &t : tets)
+    for (const auto &f : TET_FACES) faceCount[faceKey(t[f[0]], t[f[1]], t[f[2]])]++;
+
+  std::vector<std::array<int, 3>> out;
+  for (const auto &t : tets) {
+    for (const auto &f : TET_FACES) {
+      int a = t[f[0]], b = t[f[1]], c = t[f[2]], opposite = t[f[3]];
+      if (faceCount[faceKey(a, b, c)] != 1) continue;
+      // Wind the triangle so its normal points away from the tet's 4th vertex.
+      Vector3D n = cross(pos[b] - pos[a], pos[c] - pos[a]);
+      if (dot(n, pos[opposite] - pos[a]) > 0) std::swap(b, c);
+      out.push_back({a, b, c});
+    }
+  }
+  return out;
+}
+
 void TetMesh::buildGrid(int nx_, int ny_, int nz_, const Vector3D &size_,
                         const Vector3D &origin_) {
   nx = nx_; ny = ny_; nz = nz_;
@@ -94,23 +116,7 @@ void TetMesh::buildGrid(int nx_, int ny_, int nz_, const Vector3D &size_,
   edges.reserve(edgeKeys.size());
   for (uint64_t key : edgeKeys) edges.push_back({(int)(key >> 32), (int)(key & 0xffffffffu)});
 
-  // Boundary faces are the tet faces that belong to exactly one tet. Count all
-  // faces first, then collect in tet order so the output is deterministic.
-  std::unordered_map<uint64_t, int> faceCount;
-  faceCount.reserve(tets.size() * 4);
-  for (const auto &t : tets)
-    for (const auto &f : TET_FACES) faceCount[faceKey(t[f[0]], t[f[1]], t[f[2]])]++;
-
-  for (const auto &t : tets) {
-    for (const auto &f : TET_FACES) {
-      int a = t[f[0]], b = t[f[1]], c = t[f[2]], opposite = t[f[3]];
-      if (faceCount[faceKey(a, b, c)] != 1) continue;
-      // Wind the triangle so its normal points away from the tet's 4th vertex.
-      Vector3D n = cross(rest[b] - rest[a], rest[c] - rest[a]);
-      if (dot(n, rest[opposite] - rest[a]) > 0) std::swap(b, c);
-      surfaceTris.push_back({a, b, c});
-    }
-  }
+  surfaceTris = boundaryFaces(rest, tets);
 
   for (const auto &tri : surfaceTris)
     for (int v : tri) surfaceVerts.push_back(v);

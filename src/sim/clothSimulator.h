@@ -2,11 +2,13 @@
 #define CGL_CLOTH_SIMULATOR_H
 
 #include <nanogui/nanogui.h>
+#include <array>
 #include <memory>
 
 #include "camera.h"
 #include "cloth.h"
 #include "collision/collisionObject.h"
+#include "jello/softBody.h"
 
 using namespace nanogui;
 
@@ -23,6 +25,9 @@ public:
   void loadCloth(Cloth *cloth);
   void loadClothParameters(ClothParameters *cp);
   void loadCollisionObjects(vector<CollisionObject *> *objects);
+  // Jello mode: draw and simulate a soft body instead of the cloth. Call
+  // before init(). The ground is drawn as a quad at ground_y if has_ground.
+  void loadSoftBody(Jello::SoftBody *body, bool has_ground, double ground_y);
   virtual bool isAlive();
   virtual void drawContents();
 
@@ -44,6 +49,8 @@ public:
   // how fast the simulation runs or what frames_per_sec is set to.
   void captureFrame(int fb_width, int fb_height);
   void requestScreenshot();
+  // Save the next fully drawn frame to `path`; optionally quit afterwards.
+  void requestScreenshotTo(const std::string &path, bool exit_after);
   // Starts recording into `dir`. If max_seconds > 0, stops after that much
   // simulated time; with exit_when_done it also unpauses at the start and
   // closes the app at the end (used by the -R/-T command-line options).
@@ -51,11 +58,28 @@ public:
                       bool exit_when_done = false);
   void stopRecording();
 
+  // Fixed views so captures from different runs line up (keys 1, 2, 3):
+  // 1 = front, 2 = three-quarter, 3 = top. Jello mode only.
+  void setCameraPreset(int preset);
+  // Select a shader by its file name ("Wireframe", "Normal", "Phong", ...).
+  bool setShaderByName(const std::string &name);
+  // Jello mode: hide the tets in the octant facing the three-quarter view, to
+  // show the interior (key C).
+  void setCutaway(bool on);
+  // Jello mode: draw the visible triangle edges over shaded surfaces (key E).
+  void setShowEdges(bool on) { show_edges = on; }
+
 private:
   virtual void initGUI(Screen *screen);
   void drawWireframe(GLShader &shader);
   void drawNormals(GLShader &shader);
   void drawPhong(GLShader &shader);
+
+  // Jello mode drawing
+  void drawBodyWireframe(GLShader &shader);
+  void drawBodySurface(GLShader &shader);
+  void drawGround(GLShader &shader);
+  void drawSurfaceEdges(GLShader &wireframe_shader);
   
   void load_shaders();
   void load_textures();
@@ -81,6 +105,20 @@ private:
   Cloth *cloth;
   ClothParameters *cp;
   vector<CollisionObject *> *collision_objects;
+
+  // Jello mode (body != nullptr)
+
+  Jello::SoftBody *body = nullptr;
+  bool has_ground = false;
+  double ground_y = 0;
+  bool cutaway = false;
+  bool show_edges = false;
+  vector<std::array<int, 3>> cutaway_tris;   // surface of the kept tets
+  vector<std::array<int, 2>> cutaway_edges;  // edges of the kept tets
+  CGL::Vector3D scene_center;  // block center at rest; camera target
+  double scene_size = 1;       // largest block side; scales camera and light
+  CGL::Vector3D light_pos = CGL::Vector3D(0.5, 2, 2);
+  CGL::Vector3D light_intensity = CGL::Vector3D(3, 3, 3);
 
   // OpenGL attributes
 
@@ -144,6 +182,9 @@ private:
   static constexpr double capture_fps = 30.0;
   double sim_time = 0;            // simulated seconds since launch
   bool screenshot_requested = false;
+  std::string screenshot_path;     // empty: timestamped file in out/capture
+  bool screenshot_exit = false;
+  int screenshot_delay_frames = 0; // let the first frames settle before saving
   bool recording = false;
   bool record_exit_when_done = false;
   std::string record_dir;

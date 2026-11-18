@@ -17,6 +17,14 @@ using CGL::Vector3D;
 double tetVolume(const Vector3D &x0, const Vector3D &x1, const Vector3D &x2,
                  const Vector3D &x3);
 
+// Faces that belong to exactly one tet in `tets`, wound counter-clockwise when
+// seen from outside (normal points away from the tet's 4th vertex at `pos`).
+// For a full mesh this is the boundary surface; for a subset of tets (e.g. a
+// cutaway) it is the surface of that subset. Output follows tet order, so it
+// is deterministic.
+std::vector<std::array<int, 3>> boundaryFaces(const std::vector<Vector3D> &pos,
+                                              const std::vector<std::array<int, 4>> &tets);
+
 // A tetrahedral mesh of a box, built on a regular grid.
 //
 // Every grid cell is split into 5 tets: 4 corner tets plus 1 central tet.

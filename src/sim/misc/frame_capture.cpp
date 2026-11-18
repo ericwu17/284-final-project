@@ -39,7 +39,17 @@ bool save_framebuffer_png(const std::string &path, int fb_width, int fb_height) 
               flipped.begin() + (size_t)y * row_bytes);
   }
 
-  unsigned err = lodepng::encode(path, flipped, fb_width, fb_height, LCT_RGB, 8);
+  // Always write plain 8-bit RGB. By default lodepng shrinks images with few
+  // colors to a 1-bit palette, which some tools (e.g. ffmpeg's scaler) misread.
+  lodepng::State state;
+  state.info_raw.colortype = LCT_RGB;
+  state.info_raw.bitdepth = 8;
+  state.info_png.color.colortype = LCT_RGB;
+  state.info_png.color.bitdepth = 8;
+  state.encoder.auto_convert = 0;
+  std::vector<unsigned char> png;
+  unsigned err = lodepng::encode(png, flipped, fb_width, fb_height, state);
+  if (!err) err = lodepng::save_file(png, path);
   if (err) {
     std::cerr << "[Capture] PNG encode failed for " << path << ": "
               << lodepng_error_text(err) << std::endl;

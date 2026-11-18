@@ -1,0 +1,6 @@
+{
+  "description": "Coarse 4x4x4-cell version of block.json (320 tets), sparse enough to read the tet structure in figures.",
+  "jello": { "size": [0.1, 0.1, 0.1], "cells": [4, 4, 4], "origin": [-0.05, 0.0, -0.05], "density": 1050 },
+  "solver": "static",
+  "ground": { "y": 0.0, "friction": 0.5 }
+}

@@ -1,0 +1,6 @@
+{
+  "description": "10 cm jello block (8x8x8 cells, 2,560 tets) resting on the ground. Static: for checking the viewer and export pipeline.",
+  "jello": { "size": [0.1, 0.1, 0.1], "cells": [8, 8, 8], "origin": [-0.05, 0.0, -0.05], "density": 1050 },
+  "solver": "static",
+  "ground": { "y": 0.0, "friction": 0.5 }
+}
