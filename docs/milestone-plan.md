@@ -95,7 +95,7 @@ out/                             (git-ignored) raw sim frames, raw PNG sequences
 1. **Capture ID** = `<StageID>-<NN>` (for example `X1-03`). File name = `<ID>_<kebab-slug>.<ext>`. Never rename after logging; the report cites IDs.
 2. **Log every capture right away** with
    `scripts/log_capture.py media/X1_xpbd/X1-03_drop-wireframe.mp4 --caption "..." --cmd "..." --use report,video`.
-   The script appends a row to `media/INDEX.md` with: ID, file, caption, git hash (plus `-dirty`), date, command or scene, and intended use (`report` / `slides` / `video` / `final`). Write the caption as if it were the figure caption. That makes the report quick to write.
+   The script appends a row to `media/INDEX.md` with: ID, file, caption, date, command or scene, and intended use (`report` / `slides` / `video` / `final`). Write the caption as if it were the figure caption. That makes the report quick to write.
 3. **Reproducibility:** if a capture comes from a headless run, copy that run's `run.json` next to it as `<ID>_run.json`.
 4. **What goes in git:** PNG stills, plots (PNG plus PDF for LaTeX), short MP4s (H.264, CRF 23, under about 20 MB). Track `*.mp4` with Git LFS if the repo grows. Raw frame sequences and `.dae` frames stay in `out/`.
 5. **Fixed framing:** add 2–3 named camera presets to the GUI (key `1`/`2`/`3`: front, 3/4 view, top) so before/after captures across stages line up.

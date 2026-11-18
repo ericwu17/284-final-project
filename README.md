@@ -58,3 +58,24 @@ scripts/render.py -t 8 -s 256 -l 4 -m 5 -r 480 360 -f out.png dae/sky/CBbunny.da
 ```
 
 Run `./pathtracer -h` to list all options. With no arguments it opens a launcher GUI where you can pick the settings.
+
+## Captures (screenshots, recordings, figures)
+
+Every result we may show in the milestone or final report goes in `media/` and is logged in [media/INDEX.md](media/INDEX.md). The rules are in [docs/milestone-plan.md](docs/milestone-plan.md), section 2. Requires `ffmpeg` (`brew install ffmpeg`).
+
+In `clothsim`, press **S** for a screenshot and **V** to start/stop recording. Both save to `out/capture/` and leave out the GUI panel. Recordings save one frame per 1/30 s of *simulated* time, so the video plays in real time however slowly the sim runs. To record without pressing keys:
+
+```sh
+./build/clothsim -f scene/sphere.json -R out/capture/my_run -T 5    # 5 sim-seconds, then exit
+```
+
+Then turn the frames into a video and log it (run from the repo root):
+
+```sh
+scripts/make_video.sh out/capture/my_run media/S0_baseline/S0-03_cloth-on-sphere.mp4
+scripts/make_video.sh --hstack media/X1_xpbd/X1-04_compare.mp4 a.mp4 "Mass-spring" b.mp4 "XPBD"
+scripts/log_capture.py media/S0_baseline/S0-03_cloth-on-sphere.mp4 \
+    --caption "Figure caption..." --cmd "command that made it" --use report,video
+```
+
+`out/` is git-ignored scratch space (raw frames, sim output). Only curated captures go in `media/`.

@@ -35,6 +35,22 @@ public:
   virtual bool scrollCallbackEvent(double x, double y);
   virtual bool resizeCallbackEvent(int width, int height);
 
+  // Frame capture. Call captureFrame() once per loop iteration, after
+  // drawContents() and before the GUI widgets are drawn, so captures show
+  // the scene without the NanoGUI panel.
+  //
+  // Recording saves frames on a fixed simulated-time grid (capture_fps), not
+  // per drawn frame, so the resulting video plays back in real time no matter
+  // how fast the simulation runs or what frames_per_sec is set to.
+  void captureFrame(int fb_width, int fb_height);
+  void requestScreenshot();
+  // Starts recording into `dir`. If max_seconds > 0, stops after that much
+  // simulated time; with exit_when_done it also unpauses at the start and
+  // closes the app at the end (used by the -R/-T command-line options).
+  void startRecording(const std::string &dir, double max_seconds = -1,
+                      bool exit_when_done = false);
+  void stopRecording();
+
 private:
   virtual void initGUI(Screen *screen);
   void drawWireframe(GLShader &shader);
@@ -122,6 +138,18 @@ private:
   // Simulation flags
 
   bool is_paused = true;
+
+  // Capture state
+
+  static constexpr double capture_fps = 30.0;
+  double sim_time = 0;            // simulated seconds since launch
+  bool screenshot_requested = false;
+  bool recording = false;
+  bool record_exit_when_done = false;
+  std::string record_dir;
+  int record_frame_idx = 0;
+  double record_next_time = 0;    // sim time of the next frame to save
+  double record_stop_time = -1;   // sim time to stop at (< 0: no limit)
 
   // Screen attributes
 

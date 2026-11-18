@@ -147,7 +147,13 @@ void usageError(const char *binaryName) {
   printf("                     Automatically searched for by default.\n");
   printf("  -a     <INT>       Sphere vertices latitude direction.\n");
   printf("  -o     <INT>       Sphere vertices longitude direction.\n");
+  printf("  -R     <STRING>    Record frames (PNG, 30 fps of sim time) into this\n");
+  printf("                     directory, starting unpaused at launch.\n");
+  printf("  -T     <FLOAT>     With -R: stop after this many simulated seconds\n");
+  printf("                     and exit.\n");
   printf("\n");
+  printf("Keys: P pause, N step, R reset, Space reset camera,\n");
+  printf("      S screenshot, V start/stop recording (saved under out/capture/).\n");
   exit(-1);
 }
 
@@ -407,8 +413,11 @@ int main(int argc, char **argv) {
   
   std::string file_to_load_from;
   bool file_specified = false;
+
+  std::string record_dir;
+  double record_seconds = -1;
   
-  while ((c = getopt (argc, argv, "f:r:a:o:")) != -1) {
+  while ((c = getopt (argc, argv, "f:r:a:o:R:T:")) != -1) {
     switch (c) {
       case 'f': {
         file_to_load_from = optarg;
@@ -437,6 +446,14 @@ int main(int argc, char **argv) {
           arg_int = 1;
         }
         sphere_num_lon = arg_int;
+        break;
+      }
+      case 'R': {
+        record_dir = optarg;
+        break;
+      }
+      case 'T': {
+        record_seconds = atof(optarg);
         break;
       }
       default: {
@@ -480,6 +497,10 @@ int main(int argc, char **argv) {
   app->loadCollisionObjects(&objects);
   app->init();
 
+  if (!record_dir.empty()) {
+    app->startRecording(record_dir, record_seconds, /*exit_when_done=*/record_seconds > 0);
+  }
+
   // Call this after all the widgets have been defined
 
   screen->setVisible(true);
@@ -496,6 +517,11 @@ int main(int argc, char **argv) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     app->drawContents();
+
+    // Capture before the GUI panel is drawn so frames show only the scene.
+    int fb_width, fb_height;
+    glfwGetFramebufferSize(window, &fb_width, &fb_height);
+    app->captureFrame(fb_width, fb_height);
 
     // Draw nanogui
     screen->drawContents();

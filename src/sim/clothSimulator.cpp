@@ -12,6 +12,7 @@
 #include "collision/sphere.h"
 #include "misc/camera_info.h"
 #include "misc/file_utils.h"
+#include "misc/frame_capture.h"
 // Needed to generate stb_image binaries. Should only define in exactly one source file importing stb_image.h.
 #define STB_IMAGE_IMPLEMENTATION
 #include "misc/stb_image.h"
@@ -238,6 +239,66 @@ void ClothSimulator::init() {
 
 bool ClothSimulator::isAlive() { return is_alive; }
 
+// ----------------------------------------------------------------------------
+// Frame capture
+// ----------------------------------------------------------------------------
+
+void ClothSimulator::requestScreenshot() { screenshot_requested = true; }
+
+void ClothSimulator::startRecording(const std::string &dir, double max_seconds,
+                                    bool exit_when_done) {
+  recording = true;
+  record_dir = dir;
+  record_frame_idx = 0;
+  record_next_time = sim_time; // the current frame is saved as frame 0
+  record_stop_time = max_seconds > 0 ? sim_time + max_seconds : -1;
+  record_exit_when_done = exit_when_done;
+  if (exit_when_done) is_paused = false;
+  std::cout << "[Capture] Recording to " << dir << " at " << capture_fps
+            << " fps of simulated time" << std::endl;
+}
+
+void ClothSimulator::stopRecording() {
+  if (!recording) return;
+  recording = false;
+  std::cout << "[Capture] Stopped recording: " << record_frame_idx
+            << " frames in " << record_dir << std::endl;
+  std::cout << "[Capture] Make a video with: scripts/make_video.sh "
+            << record_dir << " <out.mp4>" << std::endl;
+  if (record_exit_when_done) is_alive = false;
+}
+
+void ClothSimulator::captureFrame(int fb_width, int fb_height) {
+  if (screenshot_requested) {
+    screenshot_requested = false;
+    std::string path = m_project_root + "/out/capture/shot_" + FrameCapture::timestamp() + ".png";
+    if (FrameCapture::save_framebuffer_png(path, fb_width, fb_height)) {
+      std::cout << "[Capture] Saved screenshot " << path << std::endl;
+    }
+  }
+
+  if (!recording) return;
+
+  // Save one PNG for every 1/capture_fps of simulated time that has elapsed.
+  // If the sim advanced several capture intervals in one drawn frame (low
+  // frames_per_sec), the frame is repeated so playback timing stays correct.
+  const double eps = 1e-9;
+  while (recording && sim_time + eps >= record_next_time) {
+    if (record_stop_time >= 0 && record_next_time > record_stop_time + eps) {
+      stopRecording();
+      return;
+    }
+    char name[32];
+    snprintf(name, sizeof(name), "/%05d.png", record_frame_idx);
+    if (!FrameCapture::save_framebuffer_png(record_dir + name, fb_width, fb_height)) {
+      stopRecording();
+      return;
+    }
+    record_frame_idx++;
+    record_next_time += 1.0 / capture_fps;
+  }
+}
+
 void ClothSimulator::drawContents() {
   glEnable(GL_DEPTH_TEST);
 
@@ -247,6 +308,7 @@ void ClothSimulator::drawContents() {
     for (int i = 0; i < simulation_steps; i++) {
       cloth->simulate(frames_per_sec, simulation_steps, cp, external_accelerations, collision_objects);
     }
+    sim_time += 1.0 / frames_per_sec;
   }
 
   // Bind the active shader
@@ -592,6 +654,18 @@ bool ClothSimulator::keyCallbackEvent(int key, int scancode, int action,
         is_paused = false;
         drawContents();
         is_paused = true;
+      }
+      break;
+    case 's':
+    case 'S':
+      requestScreenshot();
+      break;
+    case 'v':
+    case 'V':
+      if (recording) {
+        stopRecording();
+      } else {
+        startRecording(m_project_root + "/out/capture/rec_" + FrameCapture::timestamp());
       }
       break;
     }
