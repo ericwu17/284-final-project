@@ -299,7 +299,26 @@ Both use the same geometric quantities (`tetVolume`, `tetVolumeGradients` in `te
   - `C2-01` GUI clip of the shake scenario, mass-spring.
   - `C2-02` same for XPBD.
   - `C2-03` the two clips side by side with `--hstack`. **This is the centerpiece for the milestone video.**
+  - `C2-04` frequency response, plus sway and rocking over time for the C2 shake.
+  - `C2-05` (debug) plate-edge test.
 - **Done when:** both scenarios run 5 s stably with both solvers.
+- **Built:**
+  - `KinematicPlate` (`colliders.{h,cpp}`): box SDF, velocity from the analytic derivative. The amplitude ramps up linearly over `shake.ramp` s (default 0.5), so the plate velocity starts at 0 instead of jumping to 2πfA. Inside the box, points in the upper half are pushed out through the top face (not a side face).
+  - Scene key `plate` as in section 1, plus `shake.ramp`. Colliders: plate first, then the ground.
+  - Viewer draws the plate at `sim_time`. `centerAt(t)` is there for the P3 exporter.
+  - Metrics: new columns `top_x, top_z, bottom_x, bottom_z` (sway = top − bottom; slip = bottom − plate). `RESULT` and `run.json` report `max_penetration_mm` (end of each frame).
+  - Selftest: plate SDF and normals at known points, velocity vs finite differences.
+  - Scenes `shake_ms.json` (400 substeps, kv 1e6) and `shake_xpbd.json` (100 substeps, compliance 1e-6): matched volume stiffness. `scripts/plot_shake.py` (frequency sweep and demo traces).
+- **Shake chosen: 5 Hz, 10 mm** (not the 3 Hz, 15 mm sketched in section 1). 3 Hz is far below the block's resonance, so the block just rides (6 mm sway). 5 Hz is near resonance and 1 g of plate acceleration exceeds μ = 0.6, which gives visible sway, rocking (15–19°) and some slip.
+- **Verified:**
+  - Drop and shake, both solvers, 5 s: stable, no inverted tets, max volume error 0.1–0.9%.
+  - Edge test (block overhanging the plate edge while shaking): it tips off onto the ground, the plate edge dents its side, no snapping, stable (C2-05).
+  - At 3 Hz, 15 mm (0.54 g < μg) the block rides: XPBD (≥ 100 substeps) and mass-spring both sway 6–8 mm and drift ≤ 7 mm.
+- **Findings:**
+  - Sway resonance at 5.5 Hz for mass-spring (400) and XPBD (100) (C2-04 a).
+  - **XPBD needs 100 substeps here.** At 50 it is effectively softer (resonance 5 Hz, higher peak), and at 3 Hz, 15 mm it sways 42 mm, rocks 25° and slides 4–5 cm while every converged run rides. This did not show in the drop. Raising μ to 1 does not fix it, so the cause is under-resolved elasticity, not friction.
+  - At the 1 g demo shake the motion is stick-slip plus rocking, so the solvers' paths diverge after a few cycles; amplitudes stay similar (C2-04 b, c).
+  - `max_penetration_mm` is always 0, but only as a consistency check: both solvers resolve contacts last in every substep.
 
 ### Stage P3: Per-frame `.dae` export and template scene (Day 2–3)
 

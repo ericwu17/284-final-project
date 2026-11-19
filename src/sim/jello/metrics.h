@@ -29,6 +29,8 @@ struct FrameMetrics {
   double volErrPct = 0;        // (volume - rest volume) / rest volume, percent
   Vector3D com;                // mass-weighted center of mass (m)
   double topY = 0;             // mean y of the vertices that start on the top face (m)
+  double topX = 0, topZ = 0;   // mean x, z of those vertices (m)
+  double bottomX = 0, bottomZ = 0;  // mean x, z of the bottom-face vertices (m)
   double height = 0;           // vertical extent, max y - min y (m)
   double minTetVolRatio = 1;   // min over tets of V / V0 (<= 0 means inverted)
   int nInverted = 0;           // tets with V <= 0
@@ -46,7 +48,8 @@ FrameMetrics measureFrame(const SoftBody &body, int frame, double t, double step
 
 // Writes FrameMetrics rows to a CSV file, one per output frame, with a header:
 //   frame,t,volume,vol_err_pct,com_x,com_y,com_z,top_y,height,
-//   min_tet_vol_ratio,n_inverted,bbox_ratio,has_nan,step_ms,yaw_deg,tilt_deg
+//   min_tet_vol_ratio,n_inverted,bbox_ratio,has_nan,step_ms,yaw_deg,tilt_deg,
+//   top_x,top_z,bottom_x,bottom_z
 // Used by jellosim --out and by the viewer's metrics toggle (key M).
 class MetricsLogger {
  public:

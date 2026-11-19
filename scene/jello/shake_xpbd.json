@@ -1,0 +1,10 @@
+{
+  "description": "Shaking plate (Stage C2), XPBD: the 10 cm block starts 2 mm above a 25 x 1 x 25 cm plate, settles, and from t = 1 s the plate shakes along x (amplitude ramps up over 0.5 s). Material as drop_xpbd_volume.json (edge compliance 1/300 m/N, volume compliance 1e-6 1/Pa) at 100 substeps: at 50, XPBD is effectively softer and over-responds to the shake (Stage C2).",
+  "jello": { "size": [0.1, 0.1, 0.1], "cells": [8, 8, 8], "origin": [-0.05, 0.012, -0.05], "density": 1050 },
+  "solver": "xpbd",
+  "xpbd": { "edge_compliance": 0.0033333333, "edge_damping": 0.02, "substeps": 100, "volume_compliance": 1e-6, "volume": true },
+  "ground": { "y": 0.0, "friction": 0.5 },
+  "plate": { "size": [0.25, 0.01, 0.25], "center": [0, 0.005, 0], "friction": 0.6,
+             "shake": { "axis": [1, 0, 0], "amplitude": 0.01, "frequency": 5.0, "start": 1.0, "ramp": 0.5 } },
+  "camera": { "target": [0.0, 0.05, 0.0], "distance": 0.45 }
+}

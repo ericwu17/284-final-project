@@ -77,11 +77,22 @@ FrameMetrics measureFrame(const SoftBody &body, int frame, double t, double step
   for (int a = 0; a < 3; a++) m.bboxRatio = std::max(m.bboxRatio, (hi[a] - lo[a]) / mesh.size[a]);
   if (m.hasNaN) m.bboxRatio = NAN;
 
-  // Top face: vertices with grid index j == ny, tracked by rest index.
-  double topSum = 0;
-  for (int k = 0; k <= mesh.nz; k++)
-    for (int i = 0; i <= mesh.nx; i++) topSum += x[mesh.vertexId(i, mesh.ny, k)].y;
-  m.topY = topSum / ((mesh.nx + 1) * (mesh.nz + 1));
+  // Top face (grid index j == ny) and bottom face (j == 0), tracked by rest index.
+  Vector3D top(0, 0, 0), bottom(0, 0, 0);
+  for (int k = 0; k <= mesh.nz; k++) {
+    for (int i = 0; i <= mesh.nx; i++) {
+      top += x[mesh.vertexId(i, mesh.ny, k)];
+      bottom += x[mesh.vertexId(i, 0, k)];
+    }
+  }
+  const double faceVerts = (mesh.nx + 1) * (mesh.nz + 1);
+  top /= faceVerts;
+  bottom /= faceVerts;
+  m.topY = top.y;
+  m.topX = top.x;
+  m.topZ = top.z;
+  m.bottomX = bottom.x;
+  m.bottomZ = bottom.z;
 
   Vector3D u = x[mesh.vertexId(mesh.nx, mesh.ny, mesh.nz)] - x[mesh.vertexId(0, mesh.ny, mesh.nz)];
   m.yawDeg = atan2(-u.z, u.x) * 180 / M_PI;
@@ -112,16 +123,19 @@ bool MetricsLogger::open(const std::string &path) {
   path_ = path;
   rows_ = 0;
   fprintf(file, "frame,t,volume,vol_err_pct,com_x,com_y,com_z,top_y,height,"
-                "min_tet_vol_ratio,n_inverted,bbox_ratio,has_nan,step_ms,yaw_deg,tilt_deg\n");
+                "min_tet_vol_ratio,n_inverted,bbox_ratio,has_nan,step_ms,yaw_deg,tilt_deg,"
+                "top_x,top_z,bottom_x,bottom_z\n");
   return true;
 }
 
 void MetricsLogger::record(const FrameMetrics &m) {
   if (!file) return;
-  fprintf(file, "%d,%.6f,%.9e,%.6f,%.7f,%.7f,%.7f,%.7f,%.7f,%.6f,%d,%.6f,%d,%.4f,%.4f,%.4f\n",
+  fprintf(file,
+          "%d,%.6f,%.9e,%.6f,%.7f,%.7f,%.7f,%.7f,%.7f,%.6f,%d,%.6f,%d,%.4f,%.4f,%.4f,"
+          "%.7f,%.7f,%.7f,%.7f\n",
           m.frame, m.t, m.volume, m.volErrPct, m.com.x, m.com.y, m.com.z, m.topY, m.height,
           m.minTetVolRatio, m.nInverted, m.bboxRatio, m.hasNaN ? 1 : 0, m.stepMs, m.yawDeg,
-          m.tiltDeg);
+          m.tiltDeg, m.topX, m.topZ, m.bottomX, m.bottomZ);
   rows_++;
 }
 

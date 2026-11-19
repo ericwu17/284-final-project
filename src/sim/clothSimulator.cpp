@@ -498,6 +498,7 @@ void ClothSimulator::drawContents() {
     // which hides the top edge; leave the ground out of that view.
     bool ground = has_ground && active_shader.type_hint != NORMALS;
     if (ground) drawGround(shader);
+    drawPlates(shader);
     if (ground || edge_overlay) {
       // Flat-colored lines (ground grid, edge overlay) use the Wireframe shader.
       for (const UserShader &us : shaders) {
@@ -643,6 +644,52 @@ void ClothSimulator::drawGround(GLShader &shader) {
   shader.drawArray(GL_TRIANGLE_STRIP, 0, 4);
   glDisable(GL_POLYGON_OFFSET_FILL);
 
+}
+
+void ClothSimulator::drawPlates(GLShader &shader) {
+  // Kinematic plates (Stage C2): a box at the plate's position at sim_time,
+  // the time the body state on screen belongs to.
+  for (const Jello::Collider *c : jello_colliders) {
+    auto *plate = dynamic_cast<const Jello::KinematicPlate *>(c);
+    if (!plate) continue;
+    Vector3D ctr = plate->centerAt(sim_time), hs = plate->halfSize;
+    // 6 faces x 2 triangles, flat normals, counter-clockwise from outside.
+    static const int FACE_AXIS[6] = {0, 0, 1, 1, 2, 2};
+    static const double FACE_SIGN[6] = {1, -1, 1, -1, 1, -1};
+    MatrixXf positions(4, 36), normals(4, 36), uvs(2, 36), tangents(4, 36);
+    int col = 0;
+    for (int f = 0; f < 6; f++) {
+      int a = FACE_AXIS[f], u = (a + 1) % 3, v = (a + 2) % 3;
+      double sgn = FACE_SIGN[f];
+      Vector3D n(0, 0, 0);
+      n[a] = sgn;
+      // Corners of the face in (u, v), ordered so (c1 - c0) x (c2 - c0) = n.
+      double cu[4] = {-1, 1, 1, -1}, cv[4] = {-1, -1, 1, 1};
+      Vector3D corner[4];
+      for (int k = 0; k < 4; k++) {
+        Vector3D p = ctr;
+        p[a] += sgn * hs[a];
+        p[u] += cu[k] * hs[u];
+        p[v] += (sgn > 0 ? cv[k] : -cv[k]) * hs[v];
+        corner[k] = p;
+      }
+      const int tri[6] = {0, 1, 2, 0, 2, 3};
+      for (int k : tri) {
+        positions.col(col) << corner[k].x, corner[k].y, corner[k].z, 1.0;
+        normals.col(col) << n.x, n.y, n.z, 0.0;
+        uvs.col(col) << 0.0, 0.0;
+        tangents.col(col) << 1.0, 0.0, 0.0, 1.0;
+        col++;
+      }
+    }
+    if (shader.uniform("u_color", false) != -1)
+      shader.setUniform("u_color", nanogui::Color(0.55f, 0.45f, 0.35f, 1.0f), false);
+    shader.uploadAttrib("in_position", positions, false);
+    if (shader.attrib("in_normal", false) != -1) shader.uploadAttrib("in_normal", normals, false);
+    if (shader.attrib("in_uv", false) != -1) shader.uploadAttrib("in_uv", uvs, false);
+    if (shader.attrib("in_tangent", false) != -1) shader.uploadAttrib("in_tangent", tangents, false);
+    shader.drawArray(GL_TRIANGLES, 0, 36);
+  }
 }
 
 void ClothSimulator::drawGroundGrid(GLShader &shader) {

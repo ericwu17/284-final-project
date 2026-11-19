@@ -42,6 +42,43 @@ class GroundPlane : public Collider {
   double height;
 };
 
+// An axis-aligned box that moves without rotating: the shaking plate.
+// Its center follows
+//   c(t) = c0 + A r(tau) sin(2 pi f tau) axis,  tau = t - start (0 before start),
+// where r ramps linearly from 0 to 1 over `ramp` seconds. With the ramp the
+// velocity starts at 0 instead of jumping to 2 pi f A, so the block is not
+// hit by an impulse when shaking begins.
+struct PlateShake {
+  Vector3D axis = Vector3D(1, 0, 0);  // unit direction of motion
+  double amplitude = 0;               // A (m); 0 = a static plate
+  double frequency = 3;               // f (Hz)
+  double start = 1;                   // seconds
+  double ramp = 0.5;                  // seconds to reach full amplitude (0 = none)
+};
+
+class KinematicPlate : public Collider {
+ public:
+  KinematicPlate(const Vector3D &center, const Vector3D &size, const PlateShake &shake,
+                 double friction)
+      : Collider(friction), center0(center), halfSize(0.5 * size), shake(shake) {}
+  std::string name() const override { return "plate"; }
+
+  // Signed distance to the box, outward normal, and the plate's velocity.
+  // Inside the box, the normal is that of the nearest face, except that any
+  // point inside the upper half of the box, within the footprint, is pushed
+  // out through the top face. A vertex resting near the edge of the plate
+  // then cannot be shoved out sideways through a side face.
+  ContactQuery query(const Vector3D &p, double t) const override;
+
+  Vector3D centerAt(double t) const;
+  Vector3D velocityAt(double t) const;
+  Vector3D size() const { return 2 * halfSize; }
+
+  Vector3D center0;
+  Vector3D halfSize;
+  PlateShake shake;
+};
+
 // The shared contact model. Both solvers apply the same rule, at the level
 // their integrator works at, for every vertex with phi < 0:
 //   1. Move the vertex back onto the surface along the normal.

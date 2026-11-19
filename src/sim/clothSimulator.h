@@ -100,6 +100,7 @@ private:
   void drawBodySurface(GLShader &shader);
   void drawGround(GLShader &shader);
   void drawGroundGrid(GLShader &shader);
+  void drawPlates(GLShader &shader);
   void drawSurfaceEdges(GLShader &wireframe_shader);
   
   void load_shaders();

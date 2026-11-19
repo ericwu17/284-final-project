@@ -1,0 +1,10 @@
+{
+  "description": "Shaking plate (Stage C2), mass-spring: same block, plate and shake as shake_xpbd.json. Volume stiffness matched to XPBD (kv 1e6 Pa = 1 / 1e-6 1/Pa); 400 substeps, which this volume stiffness and high-friction contact need (Stages M2, C1).",
+  "jello": { "size": [0.1, 0.1, 0.1], "cells": [8, 8, 8], "origin": [-0.05, 0.012, -0.05], "density": 1050 },
+  "solver": "mass_spring",
+  "mass_spring": { "ks": 300, "kd": 0.02, "substeps": 400, "kv": 1e6, "volume": true },
+  "ground": { "y": 0.0, "friction": 0.5 },
+  "plate": { "size": [0.25, 0.01, 0.25], "center": [0, 0.005, 0], "friction": 0.6,
+             "shake": { "axis": [1, 0, 0], "amplitude": 0.01, "frequency": 5.0, "start": 1.0, "ramp": 0.5 } },
+  "camera": { "target": [0.0, 0.05, 0.0], "distance": 0.45 }
+}

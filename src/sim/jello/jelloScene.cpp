@@ -80,7 +80,7 @@ bool JelloScene::load(const std::string &path, std::string *error,
     in >> j;
     for (const auto &o : overrides) applyOverride(j, o.first, o.second);
     checkKeys(j, "scene", {"description", "jello", "solver", "mass_spring", "xpbd", "gravity", "ground",
-                           "camera"});
+                           "camera", "plate"});
 
     if (has(j, "jello")) {
       const json &b = j["jello"];
@@ -139,6 +139,30 @@ bool JelloScene::load(const std::string &path, std::string *error,
       }
     }
 
+    if (has(j, "plate")) {
+      const json &pl = j["plate"];
+      checkKeys(pl, "plate", {"size", "center", "friction", "shake"});
+      hasPlate = true;
+      plateSize = readVec3(pl, "size", plateSize);
+      plateCenter = readVec3(pl, "center", plateCenter);
+      plateFriction = readNumber(pl, "friction", plateFriction);
+      if (plateSize.x <= 0 || plateSize.y <= 0 || plateSize.z <= 0)
+        throw std::runtime_error("plate \"size\" must be > 0");
+      if (plateFriction < 0) throw std::runtime_error("plate \"friction\" must be >= 0");
+      if (has(pl, "shake")) {
+        const json &sh = pl["shake"];
+        checkKeys(sh, "plate.shake", {"axis", "amplitude", "frequency", "start", "ramp"});
+        plateShake.axis = readVec3(sh, "axis", plateShake.axis);
+        if (plateShake.axis.norm() == 0) throw std::runtime_error("shake \"axis\" must be nonzero");
+        plateShake.axis.normalize();
+        plateShake.amplitude = readNumber(sh, "amplitude", plateShake.amplitude);
+        plateShake.frequency = readNumber(sh, "frequency", plateShake.frequency);
+        plateShake.start = readNumber(sh, "start", plateShake.start);
+        plateShake.ramp = readNumber(sh, "ramp", plateShake.ramp);
+        if (plateShake.ramp < 0) throw std::runtime_error("shake \"ramp\" must be >= 0");
+      }
+    }
+
     if (has(j, "camera")) {
       const json &c = j["camera"];
       checkKeys(c, "camera", {"target", "distance"});
@@ -179,6 +203,8 @@ std::unique_ptr<SoftBody> JelloScene::buildBody(std::string *error) const {
 
 std::vector<std::unique_ptr<Collider>> JelloScene::buildColliders() const {
   std::vector<std::unique_ptr<Collider>> out;
+  if (hasPlate)
+    out.push_back(std::make_unique<KinematicPlate>(plateCenter, plateSize, plateShake, plateFriction));
   if (hasGround) out.push_back(std::make_unique<GroundPlane>(groundY, groundFriction));
   return out;
 }
@@ -201,6 +227,12 @@ std::string JelloScene::toJson() const {
   j["gravity"] = vec(gravity);
   if (hasGround) j["ground"] = {{"y", groundY}, {"friction", groundFriction}};
   else j["ground"] = nullptr;
+  if (hasPlate) {
+    j["plate"] = {{"size", vec(plateSize)}, {"center", vec(plateCenter)}, {"friction", plateFriction},
+                  {"shake", {{"axis", vec(plateShake.axis)}, {"amplitude", plateShake.amplitude},
+                             {"frequency", plateShake.frequency}, {"start", plateShake.start},
+                             {"ramp", plateShake.ramp}}}};
+  }
   if (hasCameraTarget || cameraDistance > 0) {
     json cam = json::object();
     if (hasCameraTarget) cam["target"] = vec(cameraTarget);

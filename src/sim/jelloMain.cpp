@@ -118,6 +118,43 @@ int selftest() {
   printf("Volume gradient vs finite differences, %d random tets: max relative error %.1e  %s\n",
          trials, worst, gradOk ? "PASS" : "FAIL");
   if (!gradOk) failed++;
+
+  // Shaking plate: signed distance at known points, and velocity vs the
+  // derivative of the position (finite differences), through the ramp.
+  {
+    PlateShake shake;
+    shake.axis = Vector3D(1, 0, 0);
+    shake.amplitude = 0.02;
+    shake.frequency = 3;
+    shake.start = 0.5;
+    shake.ramp = 0.4;
+    KinematicPlate plate(Vector3D(0, 0.005, 0), Vector3D(0.2, 0.01, 0.2), shake, 0.5);
+    struct Probe { Vector3D p; double phi; Vector3D n; };
+    const std::vector<Probe> probes = {
+        {Vector3D(0, 0.03, 0), 0.02, Vector3D(0, 1, 0)},          // above the top
+        {Vector3D(0.099, 0.008, 0), -0.002, Vector3D(0, 1, 0)},   // inside, upper half, near a side
+        {Vector3D(0.098, 0.001, 0), -0.001, Vector3D(0, -1, 0)},  // inside, lower half: nearest face
+        {Vector3D(0.13, 0.005, 0), 0.03, Vector3D(1, 0, 0)},      // beside the plate
+        {Vector3D(0.13, 0.05, 0), 0.05, Vector3D(0.6, 0.8, 0)},   // off the top edge
+    };
+    double sdfErr = 0;
+    for (const Probe &pr : probes) {
+      ContactQuery q = plate.query(pr.p, 0.0);
+      sdfErr = std::max({sdfErr, std::abs(q.phi - pr.phi), (q.normal - pr.n).norm()});
+    }
+    double velErr = 0;
+    for (double t = 0.0; t < 2.0; t += 0.0137) {
+      const double h = 1e-6;
+      Vector3D fd = (plate.centerAt(t + h) - plate.centerAt(t - h)) / (2 * h);
+      velErr = std::max(velErr, (fd - plate.velocityAt(t)).norm());
+    }
+    // The ramp has corners at start and start + ramp: skip those samples by
+    // using a tolerance well above FD noise but far below 2 pi f A = 0.38 m/s.
+    bool plateOk = sdfErr < 1e-12 && velErr < 1e-4;
+    printf("Shaking plate: signed distance/normal max error %.1e, velocity vs finite "
+           "differences max error %.1e m/s  %s\n", sdfErr, velErr, plateOk ? "PASS" : "FAIL");
+    if (!plateOk) failed++;
+  }
   return failed ? 1 : 0;
 }
 
@@ -214,6 +251,9 @@ int run(int argc, char **argv) {
   ctx.gravity = scene.gravity;
   for (const auto &c : colliders) ctx.colliders.push_back(c.get());
   double maxVolErr = 0;  // max |V - V0| / V0 over output frames, percent
+  // Deepest any vertex sits inside any collider at the end of a frame (m).
+  // Contacts are resolved every substep, so this should be ~0.
+  double maxPenetration = 0;
 
   const double fps = 30.0;
   const int frames = (int)std::lround(seconds * fps);
@@ -251,6 +291,9 @@ int run(int argc, char **argv) {
     FrameMetrics m = measureFrame(*body, frame + 1, (frame + 1) / fps, stepMs);
     log.record(m);
     if (st.ok) maxVolErr = std::max(maxVolErr, std::abs(m.volErrPct));
+    for (const Collider *c : ctx.colliders)
+      for (const Vector3D &p : body->x)
+        maxPenetration = std::max(maxPenetration, -c->query(p, (frame + 1) / fps).phi);
     if (!quiet && ((frame + 1) % every == 0 || !st.ok)) {
       printf("%8.3f %10.4f %10.4f %10.3f %10.3f %10.3f %9.3f %9.3f %11.4f\n", m.t, m.com.y,
              m.height, st.bboxRatio, m.com.x * 1000, m.com.z * 1000, m.yawDeg, m.tiltDeg,
@@ -262,9 +305,9 @@ int run(int argc, char **argv) {
   std::string failT = st.ok ? "none" : std::to_string((frame + 1) / fps);
 
   printf("RESULT solver=%s stable=%d seconds=%.4f fail_t=%s dt=%.6g ms_per_frame=%.4f "
-         "max_vol_err_pct=%.4f reason=\"%s\"\n",
+         "max_vol_err_pct=%.4f max_penetration_mm=%.4f reason=\"%s\"\n",
          body->name().c_str(), st.ok ? 1 : 0, done / fps, failT.c_str(), dt, simMs / done,
-         maxVolErr, st.reason.c_str());
+         maxVolErr, 1000 * maxPenetration, st.reason.c_str());
 
   if (!outDir.empty()) {
     log.close();
@@ -284,7 +327,8 @@ int run(int argc, char **argv) {
                  {"edges", body->mesh().edges.size()}, {"mass_kg", body->totalMass()}};
     r["result"] = {{"stable", st.ok}, {"seconds", done / fps}, {"fail_t", failT},
                    {"reason", st.reason}, {"ms_per_frame", simMs / done},
-                   {"max_vol_err_pct", maxVolErr}, {"frames_logged", log.rows()}};
+                   {"max_vol_err_pct", maxVolErr}, {"max_penetration_mm", 1000 * maxPenetration},
+                   {"frames_logged", log.rows()}};
     r["git_commit"] = shellLine("git rev-parse --short HEAD 2>/dev/null");
     r["git_dirty"] = !shellLine("git status --porcelain --untracked-files=no 2>/dev/null").empty();
     std::ofstream out(outDir + "/run.json");

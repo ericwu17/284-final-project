@@ -26,8 +26,13 @@ namespace Jello {
 //                 "volume_compliance": 1e-5, "volume": true },
 //     "gravity": [0, -9.8, 0],
 //     "ground": { "y": 0.0, "friction": 0.5 },
+//     "plate":  { "size": [0.25, 0.01, 0.25], "center": [0, 0.005, 0], "friction": 0.6,
+//                 "shake": { "axis": [1, 0, 0], "amplitude": 0.015, "frequency": 3.0,
+//                            "start": 1.0, "ramp": 0.5 } },
 //     "camera": { "target": [0.1, 0.05, 0], "distance": 0.6 }
 //   }
+// "plate" adds a kinematic box (see KinematicPlate) on top of the ground;
+// without "shake" (or with amplitude 0) it stays still.
 // "camera" only affects the viewer: what the presets look at, and from how
 // far (default: the block and the ground below it).
 // Units are SI (meters, kg/m^3), Y is up. Every field is optional and
@@ -49,6 +54,12 @@ struct JelloScene {
   double groundY = 0.0;
   double groundFriction = 0.5;  // Coulomb mu (static = kinetic)
 
+  bool hasPlate = false;
+  Vector3D plateCenter = Vector3D(0, 0.005, 0);
+  Vector3D plateSize = Vector3D(0.25, 0.01, 0.25);
+  double plateFriction = 0.6;
+  PlateShake plateShake;
+
   bool hasCameraTarget = false;
   Vector3D cameraTarget;
   double cameraDistance = 0;  // 0: viewer default
@@ -63,7 +74,7 @@ struct JelloScene {
   TetMesh buildMesh() const;
   // Mesh + solver. Returns nullptr (and sets *error) for an unknown solver.
   std::unique_ptr<SoftBody> buildBody(std::string *error) const;
-  // The scene's obstacles (currently just the ground, if any).
+  // The scene's obstacles: the plate (if any), then the ground (if any).
   std::vector<std::unique_ptr<Collider>> buildColliders() const;
 
   // Every scene value after defaults and overrides, as a JSON object in the
