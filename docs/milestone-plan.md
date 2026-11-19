@@ -370,8 +370,24 @@ Both use the same geometric quantities (`tetVolume`, `tetVolumeGradients` in `te
 - **Capture:**
   - `R1-01` CBspheres after the fix (compare with `S0-02`).
   - `R1-02` a max-ray-depth sequence (a classic report figure).
-  - `R1-03` ior sweep 1.0 / 1.33 / 1.5 on the glass sphere.
+  - `R1-03` ior sweep 1.0 / 1.33 / 1.5 (+ 2.0) on the glass sphere.
 - **Done when:** the glass sphere is correct at 256 spp.
+- **Built:**
+  - `advanced_bsdf.cpp`:
+    - `reflect` and `refract` (Snell; false on total internal reflection).
+    - `MirrorBSDF`, `RefractionBSDF`, and `GlassBSDF` with **exact unpolarized Fresnel** (not Schlick); total internal reflection reflects everything.
+    - Transmission scales radiance by (η_wo/η_wi)², the PBRT radiance convention. The plan's "/η²" is the importance convention; through a closed object the two give the same image.
+    - `MicrofacetBSDF` is still a stub (not needed for jello).
+  - `pathtracer.cpp`:
+    - `|cos|` in the bounce term.
+    - No light sampling at delta surfaces; a delta vertex at the last depth still traces its bounce.
+    - No Russian roulette on delta bounces.
+    - Emission after a delta bounce counts only on **purely specular paths** (camera → mirror/glass … → light), tracked by a new `Ray::specular_chain` flag.
+- **Caustics dropped on purpose:** the first version counted emission after every delta bounce. That renders real caustics (a bright patch under the glass), but diffuse → specular → small-light paths are so rare that the walls fill with fireflies at 64–256 spp. Dropping them gives the caustic-free shadows the plan expected. Side effect: an ior = 1.0 sphere still casts a shadow (R1-03).
+- **Verified:**
+  - CBspheres renders as in HW3-2 (R1-01). The depth sweep behaves as expected: glass is opaque at depth 2 and clear from depth 3 (R1-02).
+  - No fireflies. Isolated dark pixels: 146, vs 141 in the diffuse S0-01, so they are edges, not NaNs.
+  - Depth 5 ≈ depth 100 for the sphere; use `-m 8` or more for the jello block, which has more internal bounces.
 
 ### Stage R2: Jello material on static meshes (Day 2–3)
 

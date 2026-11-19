@@ -19,6 +19,11 @@ namespace CGL {
 
 struct Ray {
   size_t depth;  ///< depth of the Ray
+  /// True while every bounce so far was specular (mirror/glass): camera
+  /// rays, and rays continuing a chain of delta bounces. The path tracer only
+  /// adds emission found after a delta bounce on such paths (see
+  /// at_least_one_bounce_radiance).
+  bool specular_chain = true;
 
   Vector3D o;  ///< origin
   Vector3D d;  ///< direction

@@ -173,15 +173,27 @@ Vector3D PathTracer::at_least_one_bounce_radiance(const Ray &r,
   if (r.depth == 0)
     return L_out;
 
-  // Without accumulation, only the bounce at max_ray_depth contributes
-  if (isAccumBounces || r.depth == 1)
+  // Delta BSDFs (mirror, glass) scatter into a single direction, which light
+  // sampling never picks, so their direct lighting is zero. Light reaches them
+  // only through the sampled bounce, below.
+  const bool delta = isect.bsdf->is_delta();
+
+  // Without accumulation, only the bounce at max_ray_depth contributes. A
+  // bounce made here is bounce number (max_ray_depth - r.depth + 1).
+  const bool count_this_bounce = isAccumBounces || r.depth == 1;
+  if (!delta && count_this_bounce)
     L_out += one_bounce_radiance(r, isect);
 
-  if (r.depth == 1)
+  // A diffuse vertex at the last depth stops here; a delta vertex still has
+  // to trace its one bounce to see what lies in the mirror/refracted direction.
+  if (r.depth == 1 && !delta)
     return L_out;
 
-  // Russian roulette, except the first indirect bounce is always traced
-  double cont_prob = (r.depth == max_ray_depth) ? 1.0 : 0.65;
+  // Russian roulette, except on the first indirect bounce and on delta
+  // bounces: a path through the jello needs several specular bounces in a row
+  // (enter, internal reflections, exit), and killing 35% at each one would
+  // make it mostly noise.
+  double cont_prob = (delta || r.depth == max_ray_depth) ? 1.0 : 0.65;
   if (!coin_flip(cont_prob))
     return L_out;
 
@@ -193,13 +205,34 @@ Vector3D PathTracer::at_least_one_bounce_radiance(const Ray &r,
 
   Ray bounce_ray(hit_p, o2w * w_in, (int)r.depth - 1);
   bounce_ray.min_t = EPS_F;
+  bounce_ray.specular_chain = r.specular_chain && delta;
 
+  // Emission found after a delta bounce is added only on purely specular
+  // paths (camera -> mirror/glass ... -> light): the light seen in or through
+  // the jello. Paths that went diffuse first and then hit a light through a
+  // delta bounce are caustics; a small light is reached that way so rarely
+  // that they render as fireflies all over the walls, so they are dropped
+  // (shadows behind glass are caustic-free, as in HW3).
+  const bool add_emission = delta && count_this_bounce && r.specular_chain;
+
+  Vector3D L_in;
   Intersection bounce_isect;
-  if (!bvh->intersect(bounce_ray, &bounce_isect))
-    return L_out;
+  if (!bvh->intersect(bounce_ray, &bounce_isect)) {
+    // A delta bounce that escapes sees the environment directly.
+    if (add_emission && envLight)
+      L_in = envLight->sample_dir(bounce_ray);
+  } else {
+    // Emission seen through a delta bounce (the light reflected in or
+    // refracted through the jello). After a non-delta bounce, emission is
+    // already counted by light sampling at this vertex, so adding it there
+    // would count it twice.
+    if (add_emission)
+      L_in += zero_bounce_radiance(bounce_ray, bounce_isect);
+    L_in += at_least_one_bounce_radiance(bounce_ray, bounce_isect);
+  }
 
-  Vector3D L_in = at_least_one_bounce_radiance(bounce_ray, bounce_isect);
-  L_out += f * L_in * w_in.z / pdf / cont_prob;
+  // |cos|: transmitted directions have w_in.z < 0.
+  L_out += f * L_in * fabs(w_in.z) / pdf / cont_prob;
 
   return L_out;
 }
