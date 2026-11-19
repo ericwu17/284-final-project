@@ -1026,6 +1026,10 @@ bool ClothSimulator::keyCallbackEvent(int key, int scancode, int action,
                                       int mods) {
   ctrl_down = (bool)(mods & GLFW_MOD_CONTROL);
 
+  // A scripted recording (-R with -T) must not be changed by keys typed into
+  // the window by accident (it takes focus when it opens): only Esc works.
+  if (record_exit_when_done && recording && key != GLFW_KEY_ESCAPE) return true;
+
   if (action == GLFW_PRESS) {
     switch (key) {
     case GLFW_KEY_ESCAPE:

@@ -454,6 +454,26 @@ Both use the same geometric quantities (`tetVolume`, `tetVolumeGradients` in `te
   - `I1-06` shake, MS | XPBD side by side.
   - `I1-07` a filmstrip still (6 frames across the impact) for the report.
 - **Done when:** both scenarios render end to end for both solvers. **This is the milestone bar.**
+- **Setup (chosen from the I1-08…10 viewer previews, made with `scripts/preview_grid.py`):**
+  - Scenes `scene/jello/i1_{drop,shake}_{ms,xpbd}.json`:
+    - springs 150 N/m (XPBD compliance 1/150);
+    - volume stiffness matched (kv 1e6 Pa = compliance 1e-6);
+    - plate friction 0.3, floor friction 0.5;
+    - substeps: 400 for mass-spring, 100 for XPBD. XPBD's drop needs 100: at 50 the soft springs let the worst volume error reach 1.3%.
+  - Exported with `dae/jello/template_backdrop.dae` (red jello, spheres behind it). 4 s each, 121 frames.
+  - Worst volume error: 0.29 / 0.47 / 0.09 / 0.16% (drop MS / drop XPBD / shake MS / shake XPBD). All stable.
+  - Rendered by `scripts/render_i1.sh` (`render_sequence.py`: resumable, per-frame times in `render_times.csv`) at 960×540, 64 spp, `-l 4 -m 8`.
+    - Test frames took 33–64 s, so about 6–7 h for 484 frames, run overnight on one laptop under `caffeinate`.
+    - Videos are encoded at the end into `out/render/i1/`.
+  - Known look issue: a fine grain near the bottom of the block in the drop frames (long internal-reflection paths; 64 spp).
+- **Result (rendered overnight 23:22–06:45 on one laptop):**
+  - All 4 × 121 frames rendered; 7.4 h in total.
+  - Seconds per frame (mean, range): drop MS 47.5 (33–71), drop XPBD 47.4 (35–68), shake MS 65.0 (41–86), shake XPBD 61.4 (41–82). The plate adds light paths.
+  - Captures I1-01…07 are logged. The videos are CRF 18 (about 40 MB in `media/I1_sequences/`).
+  - The drop pair is nearly identical. The shake pair rocks alike and drifts slowly apart.
+  - The grain in the drop's impact frames (64 spp) is visible in I1-07, as expected.
+  - **The milestone bar is met.**
+- **Viewer fix:** scripted recordings (`-R … -T`) now ignore every key except Esc. A preview cell had switched camera when stray keystrokes reached the newly opened window.
 
 ### Stage I2: Milestone deliverables (Day 5)
 

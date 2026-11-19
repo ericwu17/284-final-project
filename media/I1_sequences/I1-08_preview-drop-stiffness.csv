@@ -1,0 +1,7 @@
+label,scene,overrides,stable,reason,max_vol_err_pct,ms_per_frame,min_height_mm,first_rebound_com_mm,max_sway_mm,max_tilt_deg,final_drift_mm
+MS  ks 150,scene/jello/drop_ms_volume.json,mass_spring.ks=150;mass_spring.kv=1e6;mass_spring.substeps=400;ground.friction=0.5,1,,0.286,22.4,88.6,82.1,0.0,0.0,-0.0
+MS  ks 300,scene/jello/drop_ms_volume.json,mass_spring.ks=300;mass_spring.kv=1e6;mass_spring.substeps=400;ground.friction=0.5,1,,0.188,21.9,96.5,84.7,0.0,0.0,-0.0
+MS  ks 1000,scene/jello/drop_ms_volume.json,mass_spring.ks=1000;mass_spring.kv=1e6;mass_spring.substeps=400;ground.friction=0.5,1,,0.128,22.1,99.1,61.4,0.0,0.0,-0.0
+XPBD  k 150,scene/jello/drop_xpbd_volume.json,xpbd.edge_compliance=0.0066666667;ground.friction=0.5,1,,1.306,10.0,89.6,80.3,0.3,0.2,-0.1
+XPBD  k 300,scene/jello/drop_xpbd_volume.json,xpbd.edge_compliance=0.0033333333;ground.friction=0.5,1,,0.84,9.9,96.6,81.9,1.4,0.7,0.2
+XPBD  k 1000,scene/jello/drop_xpbd_volume.json,xpbd.edge_compliance=0.001;ground.friction=0.5,1,,0.597,10.4,99.6,50.3,12.6,6.9,0.6

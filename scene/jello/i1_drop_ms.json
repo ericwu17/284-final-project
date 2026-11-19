@@ -1,0 +1,33 @@
+{
+  "description": "I1 drop, mass-spring: 10 cm red jello block dropped 10 cm onto the floor (ground friction 0.5). Milestone render settings (Stage I1, chosen from the I1-08..10 previews): springs 150 N/m, volume stiffness matched between solvers (kv 1e6 Pa = compliance 1e-6 1/Pa). 400 substeps (kv 1e6 needs >= 159).",
+  "jello": {
+    "size": [
+      0.1,
+      0.1,
+      0.1
+    ],
+    "cells": [
+      8,
+      8,
+      8
+    ],
+    "origin": [
+      -0.05,
+      0.1,
+      -0.05
+    ],
+    "density": 1050
+  },
+  "solver": "mass_spring",
+  "mass_spring": {
+    "ks": 150,
+    "kd": 0.02,
+    "substeps": 400,
+    "kv": 1000000.0,
+    "volume": true
+  },
+  "ground": {
+    "y": 0.0,
+    "friction": 0.5
+  }
+}

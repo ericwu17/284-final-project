@@ -1,0 +1,65 @@
+{
+  "description": "I1 shake, mass-spring: the block rests on a 25 cm plate that shakes along x from t = 1 s (5 Hz, 10 mm, ramped over 0.5 s); plate friction 0.3, so it slides as well as sways. Milestone render settings (Stage I1, chosen from the I1-08..10 previews): springs 150 N/m, volume stiffness matched between solvers (kv 1e6 Pa = compliance 1e-6 1/Pa). 400 substeps.",
+  "jello": {
+    "size": [
+      0.1,
+      0.1,
+      0.1
+    ],
+    "cells": [
+      8,
+      8,
+      8
+    ],
+    "origin": [
+      -0.05,
+      0.012,
+      -0.05
+    ],
+    "density": 1050
+  },
+  "solver": "mass_spring",
+  "mass_spring": {
+    "ks": 150,
+    "kd": 0.02,
+    "substeps": 400,
+    "kv": 1000000.0,
+    "volume": true
+  },
+  "ground": {
+    "y": 0.0,
+    "friction": 0.5
+  },
+  "plate": {
+    "size": [
+      0.25,
+      0.01,
+      0.25
+    ],
+    "center": [
+      0,
+      0.005,
+      0
+    ],
+    "friction": 0.3,
+    "shake": {
+      "axis": [
+        1,
+        0,
+        0
+      ],
+      "amplitude": 0.01,
+      "frequency": 5.0,
+      "start": 1.0,
+      "ramp": 0.5
+    }
+  },
+  "camera": {
+    "target": [
+      0.0,
+      0.05,
+      0.0
+    ],
+    "distance": 0.45
+  }
+}
