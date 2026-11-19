@@ -220,7 +220,6 @@
         </technique>
       </profile_COMMON>
     </effect>
-    <!-- Jello: diffuse placeholder until Stage R2 adds the CGL <jello> profile. -->
     <effect id="jello-effect">
       <profile_COMMON>
         <technique sid="common">
@@ -246,6 +245,19 @@
           </phong>
         </technique>
       </profile_COMMON>
+      <extra>
+        <!-- Path tracer material (Stage R2): smooth dielectric surface around an
+             absorbing interior. sigma_a is per scene unit (6 units = 1 m), RGB.
+             The diffuse color above is only a fallback for other viewers. -->
+        <technique profile="CGL">
+          <jello>
+            <ior>1.34</ior>
+            <sigma_a>0 0 0</sigma_a>
+            <reflectance>1 1 1</reflectance>
+            <transmittance>1 1 1</transmittance>
+          </jello>
+        </technique>
+      </extra>
     </effect>
     <effect id="plate-effect">
       <profile_COMMON>

@@ -29,6 +29,65 @@ double fresnelDielectric(double cosI, double cosT, double etaI, double etaT) {
   return 0.5 * (rs * rs + rp * rp);
 }
 
+// Mirror about the normal (0, 0, 1) in the local frame.
+void reflect_dir(const Vector3D wo, Vector3D* wi) {
+  *wi = Vector3D(-wo.x, -wo.y, wo.z);
+}
+
+// Snell's law in the local frame (normal (0, 0, 1)). wo.z > 0 means wo is
+// outside (in vacuum) and the refracted wi goes inside, and vice versa.
+// Returns false on total internal reflection (no refracted direction).
+bool refract_dir(const Vector3D wo, Vector3D* wi, double ior) {
+  const bool entering = wo.z > 0;
+  const double eta = entering ? 1.0 / ior : ior;  // eta_wo / eta_wi
+  double cos2T = 1.0 - eta * eta * (1.0 - wo.z * wo.z);
+  if (cos2T < 0) return false;
+  double cosT = sqrt(cos2T);
+  *wi = Vector3D(-eta * wo.x, -eta * wo.y, entering ? -cosT : cosT);
+  return true;
+}
+
+// Smooth dielectric interface, shared by GlassBSDF and JelloBSDF.
+Vector3D sample_dielectric(const Vector3D wo, Vector3D* wi, double* pdf, double ior,
+                           const Vector3D& reflectance, const Vector3D& transmittance) {
+  // Smooth dielectric. wo is on the outside when wo.z > 0 (the normal points
+  // out of the object). Fresnel: exact (unpolarized), not Schlick.
+  //
+  // With probability F the ray reflects (pdf F, value F * reflectance / |cos|),
+  // otherwise it refracts (pdf 1 - F, value (1 - F) * transmittance * eta^2 /
+  // |cos|), so each branch carries weight reflectance or transmittance * eta^2
+  // after the integrator divides by the pdf and multiplies by |cos|.
+  //
+  // eta = eta_wo / eta_wi. Radiance follows L_wo = eta^2 * (1 - F) * L_wi
+  // (PBRT 8.2, radiance transport). Through a closed object the entering and
+  // leaving factors cancel, so this choice only matters for paths that start
+  // or end inside the jello.
+  const bool entering = wo.z > 0;
+  const double etaI = entering ? 1.0 : ior;  // medium on the wo side
+  const double etaT = entering ? ior : 1.0;  // medium on the other side
+  const double eta = etaI / etaT;
+  const double cosI = fabs(wo.z);
+
+  double sin2T = eta * eta * std::max(0.0, 1.0 - cosI * cosI);
+  if (sin2T >= 1.0) {
+    // Total internal reflection: all of it is reflected.
+    reflect_dir(wo, wi);
+    *pdf = 1;
+    return reflectance / std::max(abs_cos_theta(*wi), MIN_ABS_COS);
+  }
+  double cosT = sqrt(1.0 - sin2T);
+  double F = fresnelDielectric(cosI, cosT, etaI, etaT);
+
+  if (coin_flip(F)) {
+    reflect_dir(wo, wi);
+    *pdf = F;
+    return F * reflectance / std::max(abs_cos_theta(*wi), MIN_ABS_COS);
+  }
+  refract_dir(wo, wi, ior);
+  *pdf = 1 - F;
+  return (1 - F) * transmittance * (eta * eta) / std::max(abs_cos_theta(*wi), MIN_ABS_COS);
+}
+
 } // namespace
 
 // Mirror BSDF //
@@ -157,42 +216,27 @@ Vector3D GlassBSDF::f(const Vector3D wo, const Vector3D wi) {
 }
 
 Vector3D GlassBSDF::sample_f(const Vector3D wo, Vector3D* wi, double* pdf) {
-  // Smooth dielectric. wo is on the outside when wo.z > 0 (the normal points
-  // out of the object). Fresnel: exact (unpolarized), not Schlick.
-  //
-  // With probability F the ray reflects (pdf F, value F * reflectance / |cos|),
-  // otherwise it refracts (pdf 1 - F, value (1 - F) * transmittance * eta^2 /
-  // |cos|), so each branch carries weight reflectance or transmittance * eta^2
-  // after the integrator divides by the pdf and multiplies by |cos|.
-  //
-  // eta = eta_wo / eta_wi. Radiance follows L_wo = eta^2 * (1 - F) * L_wi
-  // (PBRT 8.2, radiance transport). Through a closed object the entering and
-  // leaving factors cancel, so this choice only matters for paths that start
-  // or end inside the jello.
-  const bool entering = wo.z > 0;
-  const double etaI = entering ? 1.0 : ior;  // medium on the wo side
-  const double etaT = entering ? ior : 1.0;  // medium on the other side
-  const double eta = etaI / etaT;
-  const double cosI = fabs(wo.z);
+  return sample_dielectric(wo, wi, pdf, ior, reflectance, transmittance);
+}
 
-  double sin2T = eta * eta * std::max(0.0, 1.0 - cosI * cosI);
-  if (sin2T >= 1.0) {
-    // Total internal reflection: all of it is reflected.
-    reflect(wo, wi);
-    *pdf = 1;
-    return reflectance / std::max(abs_cos_theta(*wi), MIN_ABS_COS);
-  }
-  double cosT = sqrt(1.0 - sin2T);
-  double F = fresnelDielectric(cosI, cosT, etaI, etaT);
+// Jello BSDF //
 
-  if (coin_flip(F)) {
-    reflect(wo, wi);
-    *pdf = F;
-    return F * reflectance / std::max(abs_cos_theta(*wi), MIN_ABS_COS);
+Vector3D JelloBSDF::sample_f(const Vector3D wo, Vector3D* wi, double* pdf) {
+  // The surface scatters exactly like glass; absorption happens along the
+  // path inside, in the integrator (Stage R3).
+  return sample_dielectric(wo, wi, pdf, ior, reflectance, transmittance);
+}
+
+void JelloBSDF::render_debugger_node()
+{
+  if (ImGui::TreeNode(this, "Jello BSDF"))
+  {
+    DragDouble3("Reflectance", &reflectance[0], 0.005);
+    DragDouble3("Transmittance", &transmittance[0], 0.005);
+    DragDouble("ior", &ior, 0.005);
+    DragDouble3("sigma_a", &sigma_a_[0], 0.005);
+    ImGui::TreePop();
   }
-  refract(wo, wi, ior);
-  *pdf = 1 - F;
-  return (1 - F) * transmittance * (eta * eta) / std::max(abs_cos_theta(*wi), MIN_ABS_COS);
 }
 
 void GlassBSDF::render_debugger_node()
@@ -207,24 +251,11 @@ void GlassBSDF::render_debugger_node()
 }
 
 void BSDF::reflect(const Vector3D wo, Vector3D* wi) {
-
-  // Mirror about the normal (0, 0, 1) in the local frame.
-  *wi = Vector3D(-wo.x, -wo.y, wo.z);
+  reflect_dir(wo, wi);
 }
 
 bool BSDF::refract(const Vector3D wo, Vector3D* wi, double ior) {
-
-  // Snell's law in the local frame (normal (0, 0, 1)). wo.z > 0 means wo is
-  // outside (in vacuum) and the refracted wi goes inside, and vice versa.
-  // Returns false on total internal reflection (no refracted direction).
-  const bool entering = wo.z > 0;
-  const double eta = entering ? 1.0 / ior : ior;  // eta_wo / eta_wi
-  double cos2T = 1.0 - eta * eta * (1.0 - wo.z * wo.z);
-  if (cos2T < 0) return false;
-  double cosT = sqrt(cos2T);
-  *wi = Vector3D(-eta * wo.x, -eta * wo.y, entering ? -cosT : cosT);
-  return true;
-
+  return refract_dir(wo, wi, ior);
 }
 
 } // namespace CGL

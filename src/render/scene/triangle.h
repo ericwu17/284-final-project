@@ -82,6 +82,7 @@ public:
 
   Vector3D p1, p2, p3;
   Vector3D n1, n2, n3;
+  Vector3D ng;  // unit face normal, on the same side as n1 + n2 + n3
   
   BSDF* bsdf;
 

@@ -396,6 +396,20 @@ Both use the same geometric quantities (`tetVolume`, `tetVolumeGradients` in `te
   - **Smooth-normal guard:** if `sign(dot(−r.d, n)) != sign(dot(−r.d, ng))`, use `ng` as the shading normal for that hit. Otherwise refraction can pick the wrong η near block edges.
 - **Verify:** an undeformed block (P3 frame 0) renders as clear glass. The smooth normals visibly round the edges and corners. That is expected and looks jello-like, but compare with a faceted version (use separate per-face vertices in a test export) to see it.
 - **Capture:** `R2-01` static block, clear dielectric (σ_a = 0), 960×540, 256 spp. Optionally `R2-02`, smooth vs faceted normals side by side (good for explaining the design choice).
+- **Built:**
+  - `JelloBSDF` (`bsdf.h`, `advanced_bsdf.cpp`): the same smooth-dielectric sampling as `GlassBSDF` (shared `sample_dielectric`), plus `sigma_a`.
+    - New base-class hooks `is_medium()` / `sigma_a()` for R3.
+    - Parsed from `<jello><ior/><sigma_a/><reflectance/><transmittance/></jello>` in the CGL profile; every field is optional (ior defaults to 1.34).
+  - The template's `jello-effect` now carries that profile (ior 1.34, σ_a = 0); its diffuse color stays as a fallback.
+  - `Intersection::ng`: triangles precompute it; spheres set `ng = n`.
+  - Smooth-normal guard (`guard_shading_normal`) on camera and bounce hits.
+- **Bug found while building `ng`:** the loader's vertex normals at **boundary vertices of open meshes point against the triangle winding** (the normal loop walks the virtual boundary face). With `ng` taken straight from the winding, the guard flipped every wall normal and the whole box rendered black.
+  - Fix: `ng` is the face normal oriented to agree with the triangle's vertex normals.
+  - On the closed, outward-wound jello this equals the outward winding normal, which is what R3's inside test needs.
+- **R2-02 dropped.** A "faceted" export (separate vertices per triangle) makes every vertex a boundary vertex, and the loader's normals there are meaningless: the real face and the virtual boundary face cancel. The comparison would show a loader artifact, not the shading difference, so the `--facet` option was removed. Smooth normals only bend within one cell of each edge, which is visible as the rim along the top edge in R2-01.
+- **Verified:**
+  - CBspheres is unchanged by `ng` and the guard: on flat or open meshes they never disagree.
+  - The clear block shows total internal reflection off the bottom face, as expected for ior 1.34 at near-grazing incidence.
 
 ### Stage R3: Beer–Lambert absorbing medium (Day 3–4)
 

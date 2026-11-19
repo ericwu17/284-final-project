@@ -26,7 +26,13 @@ struct Intersection {
 
   const Primitive* primitive;  ///< the primitive intersected
 
-  Vector3D n;  ///< normal at point of intersection
+  Vector3D n;  ///< shading normal at point of intersection (interpolated for meshes)
+
+  /// Geometric normal: the triangle's face normal, oriented to the same side
+  /// as its vertex normals (outward for a closed, outward-wound mesh such as
+  /// the jello), or the sphere's normal. Never interpolated, so it tells which
+  /// side of the surface a ray is on even where the smooth normal is bent.
+  Vector3D ng;
 
   BSDF* bsdf; ///< BSDF of the surface at point of intersection
 

@@ -99,6 +99,11 @@ class BSDF {
    */
   virtual bool is_delta() const = 0;
 
+  /// Absorbing interior (Stage R3): true for closed surfaces whose inside is
+  /// a medium with absorption coefficient sigma_a() (per scene unit).
+  virtual bool is_medium() const { return false; }
+  virtual Vector3D sigma_a() const { return Vector3D(); }
+
   virtual void render_debugger_node() {};
 
   /**
@@ -264,6 +269,37 @@ class GlassBSDF : public BSDF {
   Vector3D transmittance;
 
 }; // class GlassBSDF
+
+/**
+ * Jello BSDF: a smooth dielectric surface (the same sampling as GlassBSDF)
+ * around an absorbing interior. sigma_a is the Beer-Lambert absorption
+ * coefficient per scene unit (RGB): light crossing distance d inside is
+ * scaled by exp(-sigma_a d). Parsed from <jello> in the CGL profile.
+ */
+class JelloBSDF : public BSDF {
+ public:
+
+  JelloBSDF(const Vector3D transmittance, const Vector3D reflectance, double ior,
+            const Vector3D sigma_a) :
+    transmittance(transmittance), reflectance(reflectance), ior(ior), sigma_a_(sigma_a) { }
+
+  Vector3D f(const Vector3D wo, const Vector3D wi) { return Vector3D(); }
+  Vector3D sample_f(const Vector3D wo, Vector3D* wi, double* pdf);
+  Vector3D get_emission() const { return Vector3D(); }
+  bool is_delta() const { return true; }
+  bool is_medium() const { return true; }
+  Vector3D sigma_a() const { return sigma_a_; }
+
+  void render_debugger_node();
+
+ private:
+
+  Vector3D transmittance;
+  Vector3D reflectance;
+  double ior;
+  Vector3D sigma_a_;
+
+}; // class JelloBSDF
 
 /**
  * Emission BSDF.

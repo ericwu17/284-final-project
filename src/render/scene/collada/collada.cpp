@@ -1105,6 +1105,19 @@ void ColladaParser::parse_material ( XMLElement* xml, MaterialInfo& material ) {
           float ior = atof(e_ior->GetText());
           BSDF* bsdf = new GlassBSDF(transmittance, reflectance, roughness, ior);
           material.bsdf = bsdf;
+        } else if (type == "jello") {
+          // <jello><ior/><sigma_a/><reflectance/><transmittance/></jello>; all
+          // optional. sigma_a is per scene unit (the template's node matrix
+          // scales sim meters, so it is not per meter).
+          auto vec_or = [&](const char *name, Vector3D fallback) {
+            XMLElement *e = get_element(e_bsdf, name);
+            return e ? spectrum_from_string(string(e->GetText())) : fallback;
+          };
+          XMLElement *e_ior = get_element(e_bsdf, "ior");
+          double ior = e_ior ? atof(e_ior->GetText()) : 1.34;
+          material.bsdf = new JelloBSDF(vec_or("transmittance", Vector3D(1, 1, 1)),
+                                        vec_or("reflectance", Vector3D(1, 1, 1)), ior,
+                                        vec_or("sigma_a", Vector3D(0, 0, 0)));
         }
         e_bsdf = e_bsdf->NextSiblingElement();
       }

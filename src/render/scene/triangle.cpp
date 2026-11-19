@@ -13,6 +13,13 @@ Triangle::Triangle(const Mesh *mesh, size_t v1, size_t v2, size_t v3) {
   n1 = mesh->normals[v1];
   n2 = mesh->normals[v2];
   n3 = mesh->normals[v3];
+  // Face normal, oriented to agree with the vertex normals. On a closed mesh
+  // (the jello) they come from the same winding, so ng is the outward winding
+  // normal. On open meshes (the box walls) the loader's normals at boundary
+  // vertices point opposite to the winding, and orienting ng this way keeps
+  // ng and n on the same side.
+  ng = cross(p2 - p1, p3 - p1).unit();
+  if (dot(ng, n1 + n2 + n3) < 0) ng = -ng;
   bbox = BBox(p1);
   bbox.expand(p2);
   bbox.expand(p3);
@@ -48,6 +55,7 @@ bool Triangle::intersect(const Ray &r, Intersection *isect) const {
 
   isect->t = t;
   isect->n = ((1.0 - b1 - b2) * n1 + b1 * n2 + b2 * n3).unit();
+  isect->ng = ng;
   isect->primitive = this;
   isect->bsdf = get_bsdf();
   return true;

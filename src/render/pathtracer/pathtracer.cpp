@@ -157,6 +157,16 @@ Vector3D PathTracer::one_bounce_radiance(const Ray &r,
   return estimate_direct_lighting_importance(r, isect);
 }
 
+// Smooth-normal guard. Interpolated normals near the block's edges can face
+// the other way from the true surface for a ray, so the BSDF would pick the
+// wrong side (and the wrong eta for refraction). When the shading normal and
+// the geometric normal disagree about which side the ray came from, shade
+// with the geometric normal.
+static void guard_shading_normal(const Ray &r, Intersection *isect) {
+  double s = dot(-r.d, isect->n), g = dot(-r.d, isect->ng);
+  if ((s > 0) != (g > 0)) isect->n = isect->ng;
+}
+
 Vector3D PathTracer::at_least_one_bounce_radiance(const Ray &r,
                                                   const Intersection &isect) {
   Matrix3x3 o2w;
@@ -217,7 +227,9 @@ Vector3D PathTracer::at_least_one_bounce_radiance(const Ray &r,
 
   Vector3D L_in;
   Intersection bounce_isect;
-  if (!bvh->intersect(bounce_ray, &bounce_isect)) {
+  bool hit = bvh->intersect(bounce_ray, &bounce_isect);
+  if (hit) guard_shading_normal(bounce_ray, &bounce_isect);
+  if (!hit) {
     // A delta bounce that escapes sees the environment directly.
     if (add_emission && envLight)
       L_in = envLight->sample_dir(bounce_ray);
@@ -252,6 +264,7 @@ Vector3D PathTracer::est_radiance_global_illumination(const Ray &r) {
   
   if (!bvh->intersect(r, &isect))
     return envLight ? envLight->sample_dir(r) : L_out;
+  guard_shading_normal(r, &isect);
 
   // Emitted light is bounce 0, so only include it when accumulating
   // or when it is the requested bounce
