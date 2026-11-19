@@ -65,8 +65,10 @@ Run `./pathtracer -h` to list all options. With no arguments it opens a launcher
 
 ```sh
 ./build/jellosim --run scene/jello/drop_xpbd_volume.json --seconds 4 --export out/sim/drop_xpbd/frames
-./build/pathtracer -t 10 -s 64 -l 4 -m 5 -r 960 540 -f frame0.png out/sim/drop_xpbd/frames/frame_0000.dae
+./build/pathtracer -t 10 -s 64 -l 4 -m 8 -r 960 540 -f frame0.png out/sim/drop_xpbd/frames/frame_0000.dae
 ```
+
+The jello's look is set in the template's `<jello>` element: `ior` (1.34) and `sigma_a`, the absorption per scene unit (6 units = 1 m; default strawberry red `0.5 6 8`, `0 0 0` for clear). Use `-m 8` or more so rays can bounce around inside the block. The path tracer also writes a `<name>_rate.png` sampling heat map next to each image (red = pixel used all its samples). To show the translucency, export with `--template dae/jello/template_backdrop.dae` (the same scene plus three spheres behind the jello; regenerate it with `scripts/make_backdrop_template.py` after editing `template.dae`).
 
 ## Captures (screenshots, recordings, figures)
 

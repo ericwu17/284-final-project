@@ -157,6 +157,20 @@ Vector3D PathTracer::one_bounce_radiance(const Ray &r,
   return estimate_direct_lighting_importance(r, isect);
 }
 
+// Beer-Lambert absorption along one ray segment (Stage R3). A segment that
+// ends on the surface of an absorbing medium while heading out of it
+// (along the outward geometric normal) ran inside that medium, so the light
+// it carries is scaled by exp(-sigma_a * length). No inside/outside state is
+// kept: this works because the jello surface is closed and outward-wound
+// (checked by jellosim --selftest), and ng is outward on it (see Triangle).
+static Vector3D segment_transmittance(const Ray &r, const Intersection &isect) {
+  if (!isect.bsdf || !isect.bsdf->is_medium() || dot(r.d, isect.ng) <= 0)
+    return Vector3D(1, 1, 1);
+  Vector3D s = isect.bsdf->sigma_a();
+  double len = isect.t * r.d.norm();
+  return Vector3D(exp(-s.x * len), exp(-s.y * len), exp(-s.z * len));
+}
+
 // Smooth-normal guard. Interpolated normals near the block's edges can face
 // the other way from the true surface for a ray, so the BSDF would pick the
 // wrong side (and the wrong eta for refraction). When the shading normal and
@@ -241,6 +255,7 @@ Vector3D PathTracer::at_least_one_bounce_radiance(const Ray &r,
     if (add_emission)
       L_in += zero_bounce_radiance(bounce_ray, bounce_isect);
     L_in += at_least_one_bounce_radiance(bounce_ray, bounce_isect);
+    L_in = L_in * segment_transmittance(bounce_ray, bounce_isect);
   }
 
   // |cos|: transmitted directions have w_in.z < 0.
@@ -273,7 +288,8 @@ Vector3D PathTracer::est_radiance_global_illumination(const Ray &r) {
 
   L_out += at_least_one_bounce_radiance(r, isect);
 
-  return L_out;
+  // A camera inside the jello would see through absorbing jello too.
+  return L_out * segment_transmittance(r, isect);
 }
 
 void PathTracer::raytrace_pixel(size_t x, size_t y) {

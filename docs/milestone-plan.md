@@ -422,7 +422,27 @@ Both use the same geometric quantities (`tetVolume`, `tetVolumeGradients` in `te
   - `R3-01` absorption sweep: σ_a scaled ×0.25, ×1, ×4 (red jello, for example σ_a ≈ (0.5, 6, 8) per scene unit, tuned by eye).
   - `R3-02` the hero still: a deformed mid-impact frame from the drop, 960×540, 256 spp. **Report teaser figure.**
   - `R3-03` render time per frame vs spp (a first data point for the rendering measurements).
+  - `R3-04` analytic Beer–Lambert check (slab vs `exp(−σ_a d)` with Fresnel).
+  - `R3-05` / `R3-06` (added on request): spheres behind the jello, to show translucency.
+    - R3-05: clear vs red static block.
+    - R3-06: the hero impact frame.
+    - Both use `dae/jello/template_backdrop.dae`, which `scripts/make_backdrop_template.py` generates from `template.dae`: three spheres on the floor behind the plate's back edge. Pass it to `jellosim --export` with `--template` (also usable for I1 sequences).
 - **Note:** shadows under the jello will be dark because pure path tracing finds few caustic paths. That is expected. Mention it in the report as a known limitation. A transmissive-shadow hack can be a later toggle.
+- **Built:**
+  - `segment_transmittance` in `pathtracer.cpp`: a segment that ends on a medium's surface heading out (`dot(d, ng) > 0`) ran inside it, so its light is scaled by `exp(−σ_a·t)`.
+    - Applied to every bounce segment and to camera rays.
+    - No inside/outside state; it relies on the closed, outward-wound jello mesh and the outward `ng` from R2.
+  - Template default σ_a = (0.5, 6, 8) per scene unit (strawberry red); `0 0 0` gives the clear R2 look.
+  - `scripts/beer_lambert_check.py` (analytic check) and `scripts/spp_timing.py` (time and noise vs spp).
+- **Verified:**
+  - Slab vs analytic `T²e^(−σd)/(1 − R²e^(−2σd))`: within 1.1% for σd = 0–2 against the exact emitter radiance (R3-04). The rest is 8-bit PNG rounding.
+  - σ_a = 0 multiplies by exactly 1, so it reproduces R2.
+  - Thicker or more absorbing means darker and more saturated (R3-01).
+- **Findings:**
+  - Hero frame (R3-02): 104 s at 256 spp.
+  - Time is linear in spp at about 0.5 s per spp at 960×540 (R3-03), with ±25% run-to-run variation from machine load. A 120-frame sequence at 64 spp is about 1.5 h. Noise follows about 1/√spp.
+  - Adaptive sampling rarely stops early in these scenes: the `_rate` heat maps are mostly red, so nearly every pixel uses the full spp.
+- **Housekeeping:** the path tracer writes a `<name>_rate.png` sampling heat map next to every `-f` render. Those were removed from `media/` and are now git-ignored there.
 
 ### Stage I1: End-to-end sequences (Day 4, renders overnight)
 

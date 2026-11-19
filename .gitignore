@@ -52,3 +52,6 @@ xcode
 # Render output
 out/
 *.exr
+
+# Path tracer sampling-rate heat maps (written next to every -f render; diagnostics only)
+media/**/*_rate.png

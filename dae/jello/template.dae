@@ -247,12 +247,15 @@
       </profile_COMMON>
       <extra>
         <!-- Path tracer material (Stage R2): smooth dielectric surface around an
-             absorbing interior. sigma_a is per scene unit (6 units = 1 m), RGB.
+             absorbing interior. sigma_a is per scene unit (6 units = 1 m), RGB;
+             0 0 0 gives clear jello (R2-01).
              The diffuse color above is only a fallback for other viewers. -->
         <technique profile="CGL">
           <jello>
             <ior>1.34</ior>
-            <sigma_a>0 0 0</sigma_a>
+            <!-- Strawberry red (Stage R3): over the 0.6-unit block, red keeps
+                 exp(-0.3) = 74%, green and blue under 3%. -->
+            <sigma_a>0.5 6 8</sigma_a>
             <reflectance>1 1 1</reflectance>
             <transmittance>1 1 1</transmittance>
           </jello>
