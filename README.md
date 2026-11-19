@@ -59,6 +59,15 @@ scripts/render.py -t 8 -s 256 -l 4 -m 5 -r 480 360 -f out.png dae/sky/CBbunny.da
 
 Run `./pathtracer -h` to list all options. With no arguments it opens a launcher GUI where you can pick the settings.
 
+### Rendering the jello
+
+`jellosim` writes one `.dae` per frame from `dae/jello/template.dae`; render them with the path tracer at **960x540** (the template's framing assumes that size, because the path tracer scales its field of view with the output resolution):
+
+```sh
+./build/jellosim --run scene/jello/drop_xpbd_volume.json --seconds 4 --export out/sim/drop_xpbd/frames
+./build/pathtracer -t 10 -s 64 -l 4 -m 5 -r 960 540 -f frame0.png out/sim/drop_xpbd/frames/frame_0000.dae
+```
+
 ## Captures (screenshots, recordings, figures)
 
 Every result we may show in the milestone or final report goes in `media/` and is logged in [media/INDEX.md](media/INDEX.md). The rules are in [docs/milestone-plan.md](docs/milestone-plan.md), section 2. Requires `ffmpeg` (`brew install ffmpeg`).

@@ -15,6 +15,7 @@
 #include <string>
 #include <vector>
 
+#include "jello/daeExport.h"
 #include "jello/jelloScene.h"
 #include "json.hpp"
 #include "jello/metrics.h"
@@ -35,7 +36,7 @@ void usage(const char *bin) {
   printf("      Write a unit-cube mesh with NX x NY x NZ cells as JSON\n");
   printf("      (for scripts/plot_tetmesh.py).\n");
   printf("  %s --run SCENE.json [--seconds T] [--set KEY=VALUE]... [--every N] [--quiet]\n", bin);
-  printf("                 [--out DIR] [--label TEXT]\n");
+  printf("                 [--out DIR] [--label TEXT] [--export DIR [--template FILE]]\n");
   printf("      Simulate T seconds (default 3) at 30 output frames/s, checking\n");
   printf("      stability every frame (NaN, inverted tet, bbox > 2x rest).\n");
   printf("      --set overrides a scene value, e.g. --set mass_spring.ks=1000.\n");
@@ -44,6 +45,9 @@ void usage(const char *bin) {
   printf("      is the initial state) and DIR/run.json (scene, overrides, final\n");
   printf("      parameters, git commit, result). --label names the run in run.json\n");
   printf("      (scripts/plot_metrics.py uses it as the legend entry).\n");
+  printf("      --export DIR writes DIR/frame_0000.dae, frame_0001.dae, ... (frame 0\n");
+  printf("      is the initial state) for the path tracer, from --template (default\n");
+  printf("      dae/jello/template.dae).\n");
   printf("      Ends with one 'RESULT key=value ...' line. Exit status 0 if\n");
   printf("      stable, 3 if unstable.\n");
 }
@@ -205,7 +209,7 @@ int run(int argc, char **argv) {
   double seconds = 3.0;
   bool quiet = false;
   int every = 15;  // print a row every this many frames
-  std::string outDir, label;
+  std::string outDir, label, exportDir, templatePath = "dae/jello/template.dae";
   std::vector<std::pair<std::string, std::string>> overrides;
   for (int i = 2; i < argc; i++) {
     std::string a = argv[i];
@@ -223,6 +227,10 @@ int run(int argc, char **argv) {
       every = std::max(1, atoi(argv[++i]));
     } else if (a == "--out" && i + 1 < argc) {
       outDir = argv[++i];
+    } else if (a == "--export" && i + 1 < argc) {
+      exportDir = argv[++i];
+    } else if (a == "--template" && i + 1 < argc) {
+      templatePath = argv[++i];
     } else if (a == "--label" && i + 1 < argc) {
       label = argv[++i];
     } else if (a == "--quiet") {
@@ -262,6 +270,33 @@ int run(int argc, char **argv) {
   if (scene.solver == "xpbd") substeps = scene.xpbd.substeps;
   const double dt = 1.0 / fps / substeps;
 
+  // Per-frame .dae export (Stage P3).
+  DaeExporter exporter;
+  const KinematicPlate *plate = nullptr;
+  for (const Collider *c : ctx.colliders)
+    if (!plate) plate = dynamic_cast<const KinematicPlate *>(c);
+  int exported = 0;
+  auto exportFrame = [&](int f) {
+    if (exportDir.empty()) return true;
+    char name[32];
+    snprintf(name, sizeof(name), "/frame_%04d.dae", f);
+    std::string err;
+    if (!exporter.writeFrame(exportDir + name, *body, plate, f / fps, &err)) {
+      fprintf(stderr, "Error: %s\n", err.c_str());
+      return false;
+    }
+    exported++;
+    return true;
+  };
+  if (!exportDir.empty()) {
+    std::string err;
+    if (!makeDirs(exportDir) || !exporter.loadTemplate(templatePath, &err)) {
+      fprintf(stderr, "Error: %s\n", err.empty() ? ("cannot create " + exportDir).c_str() : err.c_str());
+      return 2;
+    }
+    if (!exportFrame(0)) return 2;
+  }
+
   MetricsLogger log;
   if (!outDir.empty()) {
     if (!log.open(outDir + "/metrics.csv")) {
@@ -290,6 +325,7 @@ int run(int argc, char **argv) {
     st = checkStability(*body);
     FrameMetrics m = measureFrame(*body, frame + 1, (frame + 1) / fps, stepMs);
     log.record(m);
+    if (!exportFrame(frame + 1)) return 2;  // after timing: step_ms excludes export
     if (st.ok) maxVolErr = std::max(maxVolErr, std::abs(m.volErrPct));
     for (const Collider *c : ctx.colliders)
       for (const Vector3D &p : body->x)
@@ -308,6 +344,10 @@ int run(int argc, char **argv) {
          "max_vol_err_pct=%.4f max_penetration_mm=%.4f reason=\"%s\"\n",
          body->name().c_str(), st.ok ? 1 : 0, done / fps, failT.c_str(), dt, simMs / done,
          maxVolErr, 1000 * maxPenetration, st.reason.c_str());
+
+  if (!exportDir.empty() && !quiet)
+    printf("wrote %d frames to %s (frame_0000.dae ... frame_%04d.dae)\n", exported,
+           exportDir.c_str(), exported - 1);
 
   if (!outDir.empty()) {
     log.close();
@@ -329,6 +369,8 @@ int run(int argc, char **argv) {
                    {"reason", st.reason}, {"ms_per_frame", simMs / done},
                    {"max_vol_err_pct", maxVolErr}, {"max_penetration_mm", 1000 * maxPenetration},
                    {"frames_logged", log.rows()}};
+    if (!exportDir.empty()) r["export"] = {{"dir", exportDir}, {"template", templatePath},
+                                           {"frames", exported}};
     r["git_commit"] = shellLine("git rev-parse --short HEAD 2>/dev/null");
     r["git_dirty"] = !shellLine("git status --porcelain --untracked-files=no 2>/dev/null").empty();
     std::ofstream out(outDir + "/run.json");

@@ -95,6 +95,7 @@ add_library(jello_core STATIC
     jello/jelloScene.cpp
     jello/colliders.cpp
     jello/metrics.cpp
+    jello/daeExport.cpp
     jello/massSpringBody.cpp
     jello/xpbdBody.cpp
 )

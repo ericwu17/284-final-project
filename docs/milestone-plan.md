@@ -329,8 +329,30 @@ Both use the same geometric quantities (`tetVolume`, `tetVolumeGradients` in `te
   - Change the camera's `aspect_ratio` to 16:9 for 960×540.
 - **Exporter:** write `<polylist>` with a `VERTEX` input only (normals are recomputed by the loader anyway). Write positions of surface vertices only, re-indexed compactly. Use `%.6f` and write one frame per file: `out/sim/<run>/frame_0000.dae`.
 - **Verify:** load frame 0 in the `pathtracer` GUI. The undeformed block should sit exactly on the plate, right side up and centered. Use the diffuse fallback material until R2 lands. Check that the loader prints no halfedge or non-manifold warnings.
-- **Capture:** `P3-01` frame 0 with a diffuse jello, low spp (proves the pipeline end to end before any fancy shading).
+- **Capture:**
+  - `P3-01` frame 0 with a diffuse jello, low spp (proves the pipeline end to end before any fancy shading).
+  - `P3-02` four drop frames (release, impact, rebound, rest).
 - **Done when:** `jellosim ... -o out/sim/drop_xpbd` produces 120 loadable `.dae` frames.
+- **Built:**
+  - `jello/daeExport.{h,cpp}` (`DaeExporter`) and `jellosim --run SCENE --export DIR [--template FILE]`.
+    - Writes `DIR/frame_0000.dae` … one file per output frame; frame 0 is the initial state, so 4 s gives 121 files.
+    - Surface vertices only, re-indexed 0..n−1. The path tracer's halfedge builder requires exactly that.
+    - Positions are in sim meters. The plate node gets `translate(c(t))·scale(size)`, row-major.
+    - Scenes without a plate drop the `PLATE_BEGIN`…`PLATE_END` block.
+    - A file with an unfilled `{{…}}` is refused: the parser reads it as garbage numbers with no error (seen as a black wall).
+  - `dae/jello/template.dae`:
+    - Starts from CBempty, with the box widened to 2.67 × 1.5 × 2 (16:9) and CBspheres' CGL area light (CBempty's 5 W point light blows the walls out).
+    - Adds jello and plate meshes with diffuse placeholder materials.
+    - A grouping node `sim` holds the only scene-scale matrix: G·6, i.e. 6 units per meter, sim origin at the floor center.
+  - Path tracer fix (`application.cpp`): skip nodes without an instance, so grouping nodes load (previously a null dereference).
+- **Verified:**
+  - All 121 frames of the 4 s XPBD drop load and render with no loader errors.
+  - Direction check: sim +x appears to the right, with no mirroring.
+  - The undeformed block sits centered on the plate (P3-01).
+- **Findings for R/I:**
+  - **The path tracer ignores the COLLADA camera position.** It aims at the bounding-box center from a fixed direction at 1.5 × the box diagonal.
+  - **Its field of view scales with the output resolution.** The FOV is applied to the 800×600 startup window, and `set_screen_size` keeps the screen distance in pixels. The template's `xfov = 27.5` therefore frames the box only at `-r 960 540`. Render all sequences at that size, or fix `Camera::set_screen_size` to keep the FOV (this changes the S0 renders' framing).
+  - **Render cost:** about 0.85 s per spp per frame at 960×540 (area light, `-l 4 -m 5`, 10 threads): 64 spp ≈ 55 s per frame. See the I1 budget.
 
 ### Stage R1: Dielectric BSDF and integrator fixes (Day 1–2)
 
@@ -375,7 +397,7 @@ Both use the same geometric quantities (`tetVolume`, `tetVolumeGradients` in `te
 ### Stage I1: End-to-end sequences (Day 4, renders overnight)
 
 - **Build:** `scripts/render_sequence.py out/sim/<run> out/render/<run> --start 0 --end 120 --stride 1 -- -t 8 -s 64 -m 10 -l 4 -r 480 270`. It skips frames already rendered (so it can resume) and supports `--stride`/`--offset` so 4 laptops can split frames (`--offset k --stride 4`).
-- **Runs:** {drop, shake} × {mass-spring, XPBD}, with volume on. That is 4 × 120 frames. Time one frame first. Budget: at about 20 s per frame, roughly 2.7 h on one machine, or about 40 min split four ways.
+- **Runs:** {drop, shake} × {mass-spring, XPBD}, with volume on. That is 4 × 120 frames. Time one frame first. Budget: at about 20 s per frame, roughly 2.7 h on one machine, or about 40 min split four ways. **Measured in P3 (diffuse, 960×540): about 55 s per frame at 64 spp**, so 480 frames ≈ 7.3 h on one machine (about 1.8 h split four ways). Glass needs more spp and depth than that, so plan for the cuts in section 6 (fewer frames, or one solver rendered).
 - **Capture:**
   - `I1-01`…`I1-04` the four sequence MP4s.
   - `I1-05` drop, MS | XPBD side by side.
@@ -430,5 +452,5 @@ Rule for every day: **no stage is done until its captures are logged in `media/I
 - **`sigma_a` units are scene units**, not meters. Note the node-matrix scale in `run.json`.
 - **Retina screenshots** must use the framebuffer size, or captures come out cropped or blurry.
 - **Explicit mass-spring with a large kv** needs many substeps. Log the substep count in `run.json` so ms-per-frame comparisons are fair.
-- **Row-major `<matrix>`** in COLLADA: verify the plate's motion direction in P3 before rendering 120 frames.
+- **Row-major `<matrix>`** in COLLADA: verify the plate's motion direction in P3 before rendering 120 frames. (Done in P3: sim +x renders to the right.)
 - **Thread count:** keep `-t` the same across machines when timing renders. Otherwise only use rendered frames, not their timings.

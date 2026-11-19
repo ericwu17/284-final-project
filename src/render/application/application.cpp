@@ -243,6 +243,10 @@ void Application::load(SceneInfo* sceneInfo) {
     Collada::Instance *instance = node.instance;
     const Matrix4x4& transform = node.transform;
 
+    // Grouping nodes (e.g. the jello template's "sim" node) only carry a
+    // transform for their children, which the parser has already applied.
+    if (!instance) continue;
+
     switch(instance->type) {
       case Collada::Instance::CAMERA:
         c = static_cast<CameraInfo*>(instance);
